@@ -2,11 +2,11 @@
 from django.urls import path
 from .views import MedicationListView, MedicationListCreateView, MedicationDeleteView,UpdateMedicationView, AddMedicationLogView
 
-app_name = 'medications'  # Specify the app_name for namespacing
+app_name = 'medications'  
 
 
 urlpatterns = [
-    path('list/', MedicationListView.as_view(), name='list'),  # Adjust URL pattern and view name accordingly
+    path('list/', MedicationListView.as_view(), name='list'),  
     path('', MedicationListView.as_view(), name='medication_list'),
     path('api/medications/', MedicationListCreateView.as_view(), name='medication_list_create'),
     path('api/medications/<int:pk>/', MedicationDeleteView.as_view(), name='medication_delete'),

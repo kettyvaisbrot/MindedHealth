@@ -5,6 +5,7 @@ from datetime import datetime, timedelta
 from calendar import month_name
 from dashboard.models import FoodLog, SportLog, SleepingLog, Meetings, SeizureLog
 
+
 @login_required
 def statistics_view(request):
     selected_month = request.GET.get('month', None)
@@ -25,7 +26,6 @@ def statistics_view(request):
     breakfast_stats = get_avg_meal_time(request.user, selected_year, selected_month, 'breakfast')
     lunch_stats = get_avg_meal_time(request.user, selected_year, selected_month, 'lunch')
     dinner_stats = get_avg_meal_time(request.user, selected_year, selected_month, 'dinner')
-
     sport_stats = get_sport_statistics(request.user, selected_year, selected_month)
     sleep_stats = get_sleeping_statistics(request.user, selected_year, selected_month)
     meeting_stats = get_meeting_statistics(request.user, selected_year, selected_month)
@@ -195,8 +195,7 @@ def get_meeting_statistics(user, year, month):
         'most_common_meeting_count': most_common_meeting_count,
     }
 
-from django.db.models import F, ExpressionWrapper, IntegerField
-from datetime import timedelta
+
 
 def get_seizure_statistics(user, year, month):
     """Helper function to calculate seizure statistics for a given user, year, and month."""

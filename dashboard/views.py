@@ -2,7 +2,7 @@ from rest_framework.renderers import JSONRenderer
 from django.utils.decorators import method_decorator
 from django.views.decorators.csrf import csrf_exempt
 from django.shortcuts import render, redirect
-from django.http import JsonResponse
+from django.http import JsonResponse, HttpResponseRedirect
 from django.views import View
 import datetime
 from medications.models import Medication, MedicationLog
@@ -16,53 +16,16 @@ from .serializers import (
 from rest_framework.response import Response
 from rest_framework import status
 from django.shortcuts import get_object_or_404
-from .models import Meetings
-from .serializers import MeetingsSerializer
-from rest_framework.views import APIView
 from rest_framework.views import APIView
 from rest_framework.permissions import IsAuthenticated
-from rest_framework.response import Response
-from rest_framework import status
 from django.urls import reverse
-from .models import Meetings
-from .serializers import MeetingsSerializer
-from rest_framework.renderers import JSONRenderer
 from django.views.generic import View
-from rest_framework.response import Response
 from rest_framework.decorators import api_view
-from rest_framework import status
-from .serializers import MeetingsSerializer
 from django.shortcuts import HttpResponseRedirect
-from django.urls import reverse
-from rest_framework.views import APIView
-from rest_framework.response import Response
-from rest_framework import status
-from .models import SportLog
-from .serializers import SportLogSerializer
-from django.shortcuts import render
-from .models import FoodLog
-import datetime
-from django.http import JsonResponse
-from rest_framework.views import APIView
-from rest_framework.response import Response
-from rest_framework import status
-from .models import FoodLog
-from .serializers import FoodLogSerializer
-import datetime
-from django.shortcuts import render
 from django.utils import timezone
-from .models import FoodLog
-from .serializers import FoodLogSerializer
-from django.http import JsonResponse, HttpResponseRedirect
-from django.urls import reverse
-from rest_framework.views import APIView
-from rest_framework.permissions import IsAuthenticated
-from rest_framework.response import Response
-from rest_framework import status
-from .models import FoodLog
-from .serializers import FoodLogSerializer
-from .models import Meetings
-from .serializers import MeetingsSerializer
+
+
+
 
 
 def dashboard_home(request):
@@ -92,9 +55,6 @@ def dashboard_home(request):
             if log.medication.id not in medication_log_data:
                 medication_log_data[log.medication.id] = []
             medication_log_data[log.medication.id].append(log.time_taken)
-        # Add logging
-        print(f"Seizure Logs: {seizure_logs}")
-        print(f"medications:{medications}")
         context['food_logs'] = food_logs
         context['sport_logs'] = sport_logs
         context['sleeping_logs'] = sleeping_logs
@@ -114,7 +74,6 @@ def dashboard_home(request):
 
 class FoodLogAPIView(APIView):
     def get(self, request, date):
-        # Assuming 'date' format is 'YYYY-MM-DD'
         food_logs = FoodLog.objects.filter(user=request.user, date=date)
         serializer = FoodLogSerializer(food_logs, many=True)
         if food_logs.exists():
@@ -162,7 +121,6 @@ class FoodLogAPIView(APIView):
 
 class SportLogAPIView(APIView):
     def get(self, request, date):
-        # Assuming 'date' format is 'YYYY-MM-DD'
         sport_logs = SportLog.objects.filter(user=request.user, date=date)
         serializer = SportLogSerializer(sport_logs, many=True)
         if sport_logs.exists():
@@ -207,11 +165,7 @@ class SportLogAPIView(APIView):
         return Response({'message': 'Sport log deleted successfully'})
 
 
-from rest_framework.views import APIView
-from rest_framework.response import Response
-from rest_framework import status
-from .models import SleepingLog
-from .serializers import SleepingLogSerializer
+
 
 class SleepingLogAPIView(APIView):
     def get(self, request, date):
@@ -299,11 +253,6 @@ class MeetingsAPIView(View):
         meeting.delete()
         return JsonResponse({'message': 'Meeting deleted successfully'})
 
-from rest_framework import status
-from rest_framework.response import Response
-from rest_framework.views import APIView
-from .models import SeizureLog
-from .serializers import SeizureLogSerializer
 
 class SeizureLogAPIView(APIView):
 
@@ -342,15 +291,6 @@ class SeizureLogAPIView(APIView):
         seizure_log = SeizureLog.objects.get(pk=pk)
         seizure_log.delete()
         return Response(status=status.HTTP_204_NO_CONTENT)
-
-
-
-
-
-
-
-    
-
 
 
 class DailyDocumentationView(View):
