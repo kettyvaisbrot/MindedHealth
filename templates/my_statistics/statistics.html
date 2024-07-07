@@ -1,0 +1,52 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Statistics</title>
+</head>
+<body>
+    <h1>Statistics for {{ current_year }}/{{ current_month }}</h1>
+
+    <h2>Food Statistics</h2>
+    <p>Average Breakfast Time: {% if breakfast_stats %}{{ breakfast_stats }}{% else %}No data{% endif %}</p>
+    <p>Average Lunch Time: {% if lunch_stats %}{{ lunch_stats }}{% else %}No data{% endif %}</p>
+    <p>Average Dinner Time: {% if dinner_stats %}{{ dinner_stats }}{% else %}No data{% endif %}</p>
+
+    <h2>Sport Statistics</h2>
+    <p>Number of Days Sport Logged: {% if sport_stats.sport_count %}{{ sport_stats.sport_count }}{% else %}No data{% endif %}</p>
+    <p>Average Sport Time: {% if sport_stats.avg_sport_time %}{{ sport_stats.avg_sport_time }}{% else %}No data{% endif %}</p>
+    <p>Most Common Sport Activity: {% if sport_stats.most_common_sport_activity %}{{ sport_stats.most_common_sport_activity }}{% else %}No data{% endif %}</p>
+
+    <h2>Sleeping Statistics</h2>
+    <p>Number of Days Logged Sleep: {% if sleep_stats.days_count %}{{ sleep_stats.days_count }}{% else %}No data{% endif %}</p>
+    <p>Average Wake Time: {% if sleep_stats.avg_wake_time %}{{ sleep_stats.avg_wake_time }}{% else %}No data{% endif %}</p>
+    <p>Average Sleep Time: {% if sleep_stats.avg_sleep_time %}{{ sleep_stats.avg_sleep_time }}{% else %}No data{% endif %}</p>
+    <p>Nights Awake Count: {% if sleep_stats.nights_awake_count %}{{ sleep_stats.nights_awake_count }}{% else %}No data{% endif %}</p>
+    
+    <h2>Meeting Statistics</h2>
+    <p>Number of Meetings: {% if meeting_stats.meetings_count %}{{ meeting_stats.meetings_count }}{% else %}No data{% endif %}</p>
+    <p>Meeting Type with Lowest Positivity Rating: {% if meeting_stats.lowest_rating_type %}{{ meeting_stats.lowest_rating_type }} (Rating: {{ meeting_stats.lowest_rating }}){% else %}No data{% endif %}</p>
+    <p>Most Common Meeting Type: {% if meeting_stats.most_common_meeting_type %}{{ meeting_stats.most_common_meeting_type }} ({{ meeting_stats.most_common_meeting_count }} occurrences){% else %}No data{% endif %}</p>
+
+
+    <h2>Seizure Statistics</h2>
+    <p>Number of Seizures: {% if seizure_stats.seizures_count %}{{ seizure_stats.seizures_count }}{% else %}No data{% endif %}</p>
+    <p>Average Time of Seizure Occurrence: {% if seizure_stats.avg_seizure_time %}{{ seizure_stats.avg_seizure_time }}{% else %}No data{% endif %}</p>
+    <p>Average Duration of Seizures: {% if seizure_stats.avg_seizure_duration %}{{ seizure_stats.avg_seizure_duration }} minutes{% else %}No data{% endif %}</p>
+    
+    <h2>Select Month and Year</h2>
+    <form method="GET" action="{% url 'my_statistics:statistics_view' %}">
+        <label for="month">Month:</label>
+        <select id="month" name="month">
+            {% for month_num, month_name in month_choices %}
+                <option value="{{ month_num }}" {% if month_num == current_month %}selected{% endif %}>{{ month_name }}</option>
+            {% endfor %}
+        </select>
+        <label for="year">Year:</label>
+        <input type="number" id="year" name="year" value="{{ current_year }}">
+        <button type="submit">View Statistics</button>
+    </form>
+
+    <p><a href="{% url 'home' %}"><button>Back to Home</button></a></p>
+</body>
+</html>
