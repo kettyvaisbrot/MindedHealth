@@ -25,10 +25,16 @@ SECRET_KEY = 'django-insecure-rg_e=t-n)x)l^9zid9bx-wqc40c5z6qiyji%!ar8)&)=m8h-q0
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 
-GOOGLE_SEARCH_API_KEY = 'AIzaSyDlMEso53m-NHo-3A4VM3BQKMV_5u1Rgzs'
-GOOGLE_SEARCH_CSE_ID = '046ede44ce9e04a66'
 
+import os
+from dotenv import load_dotenv
 
+# Load environment variables from .env file
+load_dotenv()
+
+# Access environment variables
+GOOGLE_SEARCH_API_KEY = os.getenv('GOOGLE_SEARCH_API_KEY')
+GOOGLE_SEARCH_CSE_ID = os.getenv('GOOGLE_SEARCH_CSE_ID')
 
 
 ALLOWED_HOSTS = []

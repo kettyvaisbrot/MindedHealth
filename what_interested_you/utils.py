@@ -3,9 +3,9 @@
 import requests
 
 def fetch_search_results(query):
-    api_key = 'AIzaSyDlMEso53m-NHo-3A4VM3BQKMV_5u1Rgzs'
-    cse_id = '046ede44ce9e04a66'
-    url = f"https://www.googleapis.com/customsearch/v1?key={api_key}&cx={cse_id}&q={query}"
+    GOOGLE_SEARCH_API_KEY = os.getenv('GOOGLE_SEARCH_API_KEY')
+    GOOGLE_SEARCH_CSE_ID = os.getenv('GOOGLE_SEARCH_CSE_ID')
+    url = f"https://www.googleapis.com/customsearch/v1?key={GOOGLE_SEARCH_API_KEY}&cx={GOOGLE_SEARCH_CSE_ID}&q={query}"
 
     response = requests.get(url)
     results = response.json().get('items', [])
