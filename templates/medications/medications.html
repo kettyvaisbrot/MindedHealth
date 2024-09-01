@@ -1,90 +1,163 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
-  <title>My Medications</title>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>My Medications</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 0;
+            background-color: #f4f4f4;
+        }
+        .container {
+            max-width: 900px;
+            margin: 0 auto;
+            padding: 20px;
+            background: #fff;
+            border-radius: 8px;
+            box-shadow: 0 0 10px rgba(0,0,0,0.1);
+        }
+        h1 {
+            color: #333;
+        }
+        form {
+            margin-bottom: 20px;
+        }
+        input[type="text"], input[type="number"] {
+            padding: 10px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            width: calc(100% - 22px);
+            font-size: 16px;
+            margin-bottom: 10px;
+        }
+        button {
+            background-color: #007bff;
+            color: #fff;
+            border: none;
+            padding: 10px 20px;
+            margin: 5px 0;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 16px;
+        }
+        button:hover {
+            background-color: #0056b3;
+        }
+        ul {
+            list-style-type: none;
+            padding: 0;
+        }
+        ul li {
+            padding: 10px;
+            background: #f9f9f9;
+            border: 1px solid #ddd;
+            margin-bottom: 5px;
+            border-radius: 4px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        ul li button {
+            background-color: #dc3545;
+            border: none;
+            padding: 5px 10px;
+            border-radius: 4px;
+            font-size: 14px;
+            color: #fff;
+            cursor: pointer;
+        }
+        ul li button:hover {
+            background-color: #c82333;
+        }
+        .back-home {
+            margin-top: 20px;
+        }
+    </style>
 </head>
 <body>
+    <div class="container">
+        <h1>My Medications</h1>
+        <form id="medication-form">
+            <input type="text" name="name" placeholder="Medication Name" required>
+            <input type="number" name="times_per_day" placeholder="Times per Day" required>
+            <input type="text" name="dose" placeholder="Dose" required>
+            <button type="submit">Add Medication</button>
+        </form>
 
-  <h1>My Medications</h1>
-  <form id="medication-form">
-    <input type="text" name="name" placeholder="Medication Name" required>
-    <input type="number" name="times_per_day" placeholder="Times per Day" required>
-    <input type="text" name="dose" placeholder="Dose" required>
-    <button type="submit">Add Medication</button>
-  </form>
+        <ul id="medication-list"></ul>
 
-  <ul id="medication-list"></ul>
-  
-  <script>
-    document.addEventListener('DOMContentLoaded', function() {
-      const medicationForm = document.getElementById('medication-form');
-      const medicationList = document.getElementById('medication-list');
+        <p class="back-home"><a href="{% url 'home' %}"><button>Back to Home</button></a></p>
+    </div>
 
-      function fetchMedications() {
-        fetch('/medications/api/medications/')
-          .then(response => response.json())
-          .then(data => {
-            medicationList.innerHTML = '';
-            data.forEach(med => {
-              const li = document.createElement('li');
-              li.textContent = `${med.name} (${med.times_per_day} times/day, ${med.dose})`;
-              
-              const button = document.createElement('button');
-              button.textContent = 'Remove';
-              button.setAttribute('data-id', med.id);
-              button.classList.add('delete-medication');
-              
-              li.appendChild(button);
-              medicationList.appendChild(li);
-            });
-          });
-      }
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            const medicationForm = document.getElementById('medication-form');
+            const medicationList = document.getElementById('medication-list');
 
-      medicationForm.addEventListener('submit', function(e) {
-        e.preventDefault();
-        const formData = new FormData(medicationForm);
-        fetch('/medications/api/medications/', {
-          method: 'POST',
-          body: JSON.stringify({
-            name: formData.get('name'),
-            times_per_day: formData.get('times_per_day'),
-            dose: formData.get('dose'),
-            user: '{{ request.user.id }}'  // Add the user ID here if needed
-          }),
-          headers: {
-            'Content-Type': 'application/json',
-            'X-CSRFToken': '{{ csrf_token }}'
-          }
-        }).then(() => {
-          medicationForm.reset();
-          fetchMedications();
-        }).catch(error => {
-          console.error('Error adding medication:', error);
-          // Handle error if needed
-        });
-      });
+            function fetchMedications() {
+                fetch('/medications/api/medications/')
+                    .then(response => response.json())
+                    .then(data => {
+                        medicationList.innerHTML = '';
+                        data.forEach(med => {
+                            const li = document.createElement('li');
+                            li.textContent = `${med.name} (${med.times_per_day} times/day, ${med.dose})`;
 
-      medicationList.addEventListener('click', function(e) {
-        if (e.target.classList.contains('delete-medication')) {
-          const medicationId = e.target.getAttribute('data-id');
-          fetch(`/medications/api/medications/${medicationId}/`, {
-            method: 'DELETE',
-            headers: {
-              'X-CSRFToken': '{{ csrf_token }}'
+                            const button = document.createElement('button');
+                            button.textContent = 'Remove';
+                            button.setAttribute('data-id', med.id);
+                            button.classList.add('delete-medication');
+
+                            li.appendChild(button);
+                            medicationList.appendChild(li);
+                        });
+                    });
             }
-          }).then(() => {
-            fetchMedications();
-          }).catch(error => {
-            console.error('Error deleting medication:', error);
-            // Handle error if needed
-          });
-        }
-      });
 
-      fetchMedications();
-    });
-  </script>
-  
-  <p><a href="{% url 'home' %}"><button>Back to Home</button></a></p>
+            medicationForm.addEventListener('submit', function(e) {
+                e.preventDefault();
+                const formData = new FormData(medicationForm);
+                fetch('/medications/api/medications/', {
+                    method: 'POST',
+                    body: JSON.stringify({
+                        name: formData.get('name'),
+                        times_per_day: formData.get('times_per_day'),
+                        dose: formData.get('dose'),
+                        user: '{{ request.user.id }}'  // Add the user ID here if needed
+                    }),
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRFToken': '{{ csrf_token }}'
+                    }
+                }).then(() => {
+                    medicationForm.reset();
+                    fetchMedications();
+                }).catch(error => {
+                    console.error('Error adding medication:', error);
+                });
+            });
+
+            medicationList.addEventListener('click', function(e) {
+                if (e.target.classList.contains('delete-medication')) {
+                    const medicationId = e.target.getAttribute('data-id');
+                    fetch(`/medications/api/medications/${medicationId}/`, {
+                        method: 'DELETE',
+                        headers: {
+                            'X-CSRFToken': '{{ csrf_token }}'
+                        }
+                    }).then(() => {
+                        fetchMedications();
+                    }).catch(error => {
+                        console.error('Error deleting medication:', error);
+                    });
+                }
+            });
+
+            fetchMedications();
+        });
+    </script>
 </body>
 </html>

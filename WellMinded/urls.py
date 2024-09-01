@@ -27,6 +27,6 @@ urlpatterns = [
     path('logout/', views.logout_view, name='logout'),
     path('medications/', include('medications.urls', namespace='medications')),  
     path('my_statistics/', include(('my_statistics.urls', 'my_statistics'), namespace='my_statistics')), 
-
-    
+    path('what_interested_you/', include('what_interested_you.urls')),
 ]
+

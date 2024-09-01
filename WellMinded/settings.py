@@ -25,6 +25,11 @@ SECRET_KEY = 'django-insecure-rg_e=t-n)x)l^9zid9bx-wqc40c5z6qiyji%!ar8)&)=m8h-q0
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 
+GOOGLE_SEARCH_API_KEY = 'AIzaSyDlMEso53m-NHo-3A4VM3BQKMV_5u1Rgzs'
+GOOGLE_SEARCH_CSE_ID = '046ede44ce9e04a66'
+
+
+
 
 ALLOWED_HOSTS = []
 
@@ -36,6 +41,7 @@ INSTALLED_APPS = [
     'dashboard',
     'medications',
     'my_statistics',
+    'what_interested_you',
     'dashboard.templatetags.custom_filters',
     'django.contrib.admin',
     'django.contrib.auth',

@@ -2,126 +2,214 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Dashboard</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 0;
+            background-color: #f4f4f4;
+        }
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+            background: #fff;
+            border-radius: 8px;
+            box-shadow: 0 0 10px rgba(0,0,0,0.1);
+        }
+        h1, h2, h3 {
+            color: #333;
+        }
+        a {
+            text-decoration: none;
+        }
+        .back-button a, .button {
+            display: inline-block;
+            background-color: #007bff;
+            color: #fff;
+            padding: 10px 20px;
+            margin: 5px;
+            border-radius: 4px;
+            text-align: center;
+            font-size: 16px;
+        }
+        .back-button a:hover, .button:hover {
+            background-color: #0056b3;
+        }
+        form {
+            margin-top: 20px;
+        }
+        label {
+            display: block;
+            margin: 10px 0 5px;
+        }
+        input[type="text"],
+        input[type="password"],
+        input[type="email"],
+        input[type="time"],
+        input[type="date"],
+        input[type="number"],
+        select,
+        textarea {
+            padding: 10px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            margin-bottom: 10px;
+            width: 100%;
+            font-size: 16px;
+        }
+        input[type="checkbox"] {
+            margin-right: 10px;
+        }
+        button {
+            background-color: #007bff;
+            color: #fff;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 16px;
+        }
+        button:hover {
+            background-color: #0056b3;
+        }
+        ul {
+            list-style: none;
+            padding: 0;
+        }
+        li {
+            padding: 5px 0;
+            border-bottom: 1px solid #ddd;
+        }
+        .form-container {
+            margin-top: 20px;
+        }
+    </style>
 </head>
 <body>
-    {% load custom_filters %} 
-    <h1>Dashboard</h1>
-    <!-- Back button -->
-    <a href="{% url 'home' %}">Back to Home</a>
-    <form method="GET" action="{% url 'dashboard:dashboard_home' %}">
-        <label for="datePicker">Select Date to see documantations</label>
-        <input type="date" id="datePicker" name="date" value="{% if date %}{{ date }}{% endif %}" max="{{ today }}">
-        <button type="submit">Show Data</button>
-    </form>
+    <div class="container">
+        <h1>Dashboard</h1>
+        <!-- Back Button -->
+        <div class="back-button">
+            <a href="{% url 'home' %}">Back to Home</a>
+        </div>
 
-    {% if date %}
-        {% if food_logs %}
-            <h2>Food Log for {{ date }}</h2>
-            <ul>
-                {% for log in food_logs %}
-                    <li>
-                        {{ log.date }} - 
-                        Breakfast: {% if log.breakfast_ate %} Ate {% endif %} at {{ log.breakfast_time|default:"No time specified" }}, 
-                        Lunch: {% if log.lunch_ate %} Ate {% endif %} at {{ log.lunch_time|default:"No time specified" }},
-                        Dinner: {% if log.dinner_ate %} Ate {% endif %} at {{ log.dinner_time|default:"No time specified" }}
-                    </li>
-                {% endfor %}
-            </ul>
-        {% else %}
-            <p>No food data available for {{ date }}</p>
-        {% endif %}
-        <!-- Sport Log Section -->
-        {% if sport_logs %}
-            <h2>Sport Log for {{ date }}</h2>
-            <ul>
-                {% for log in sport_logs %}
-                    <li>
-                        {{ log.date }} - 
-                        Did Sport: {% if log.did_sport %} Yes {% else %} No {% endif %}, 
-                        {% if log.did_sport %}
-                            Sport Type: {{ log.get_sport_type_display }}
-                            {% if log.sport_type == 'other' %}
-                                - Other Sport: {{ log.other_sport }}
+        <form method="GET" action="{% url 'dashboard:dashboard_home' %}">
+            <label for="datePicker">Select Date to see documentation</label>
+            <input type="date" id="datePicker" name="date" value="{% if date %}{{ date }}{% endif %}" max="{{ today }}">
+            <button type="submit">Show Data</button>
+        </form>
+
+
+        {% if date %}
+            {% if food_logs %}
+                <h2>Food Log for {{ date }}</h2>
+                <ul>
+                    {% for log in food_logs %}
+                        <li>
+                            {{ log.date }} - 
+                            Breakfast: {% if log.breakfast_ate %} Ate {% endif %} at {{ log.breakfast_time|default:"No time specified" }}, 
+                            Lunch: {% if log.lunch_ate %} Ate {% endif %} at {{ log.lunch_time|default:"No time specified" }},
+                            Dinner: {% if log.dinner_ate %} Ate {% endif %} at {{ log.dinner_time|default:"No time specified" }}
+                        </li>
+                    {% endfor %}
+                </ul>
+            {% else %}
+                <p>No food data available for {{ date }}</p>
+            {% endif %}
+            <!-- Sport Log Section -->
+            {% if sport_logs %}
+                <h2>Sport Log for {{ date }}</h2>
+                <ul>
+                    {% for log in sport_logs %}
+                        <li>
+                            {{ log.date }} - 
+                            Did Sport: {% if log.did_sport %} Yes {% else %} No {% endif %}, 
+                            {% if log.did_sport %}
+                                Sport Type: {{ log.get_sport_type_display }}
+                                {% if log.sport_type == 'other' %}
+                                    - Other Sport: {{ log.other_sport }}
+                                {% endif %}
+                                {% if log.sport_time %}
+                                    - Sport Time: {{ log.sport_time|time:"H:i" }}
+                                {% endif %}
                             {% endif %}
-                            {% if log.sport_time %}
-                                - Sport Time: {{ log.sport_time|time:"H:i" }}
-                            {% endif %}
+                        </li>
+                    {% endfor %}
+                </ul>
+            {% else %}
+                <p>No sport data available for {{ date }}</p>
+            {% endif %}
+            {% if sleeping_logs %}
+                <h2>Sleeping Log for {{ date }}</h2>
+                <ul>
+                    {% for log in sleeping_logs %}
+                        <li>
+                            {{ log.date }} - 
+                            Sleep Time: {{ log.sleep_time|time:"H:i" }}, 
+                            Wake Time: {{ log.wake_time|time:"H:i" }}, 
+                            Woke Up During Night: {% if log.woke_up_during_night %}Yes{% else %}No{% endif %}
+                        </li>
+                    {% endfor %}
+                </ul>
+            {% else %}
+                <p>No sleeping data available for {{ date }}</p>
+            {% endif %}
+            <!-- Meeting Log Section -->
+            {% if meetings_logs %}
+                <h2>Meeting Log for {{ date }}</h2>
+                <ul>
+                    {% for log in meetings_logs %}
+                        {% if log.date|date:"Y-m-d" == date %}
+                            <li>
+                                {{ log.date }} - 
+                                Time: {{ log.time|time:"H:i" }}, 
+                                Met People: {% if log.met_people %} Yes {% else %} No {% endif %}, 
+                                Positivity Rating: {{ log.positivity_rating }},
+                                Meeting Type: {{ log.get_meeting_type_display }}
+                            </li>
+                        {% else %}
+                            <li>No meetings logs for {{ date }}</li>
                         {% endif %}
-                    </li>
-                {% endfor %}
-            </ul>
-        {% else %}
-            <p>No sport data available for {{ date }}</p>
-        {% endif %}
-        {% if sleeping_logs %}
-            <h2>Sleeping Log for {{ date }}</h2>
+                    {% endfor %}
+                </ul>
+            {% else %}
+                <p>No meetings data available for {{ date }}</p>
+            {% endif %}
+            <!-- Seizure Log Section -->
+            {% if seizure_logs %}
+                <h2>Seizure Log for {{ date }}</h2>
+                <ul>
+                    {% for log in seizure_logs %}
+                        {% if log.date|date:"Y-m-d" == date %}
+                            <li>
+                                {{ log.date }} - 
+                                Time: {{ log.time|time:"H:i" }}, 
+                                Duration (minutes): {{ log.duration_minutes }},
+                                Last Memory: {{ log.last_memory }}
+                            </li>
+                        {% else %}
+                            <li>No seizure logs for {{ date }}</li>
+                        {% endif %}
+                    {% endfor %}
+                </ul>
+            {% else %}
+                <p>No seizure data available for {{ date }}</p>
+            {% endif %}
+            {% if medication_logs %}
+            <h2>Medication Log for {{ date }}</h2>
             <ul>
-                {% for log in sleeping_logs %}
-                    <li>
-                        {{ log.date }} - 
-                        Sleep Time: {{ log.sleep_time|time:"H:i" }}, 
-                        Wake Time: {{ log.wake_time|time:"H:i" }}, 
-                        Woke Up During Night: {% if log.woke_up_during_night %}Yes{% else %}No{% endif %}
-                    </li>
-                {% endfor %}
+                {% for log in medication_logs %}
+                <li>{{ log.medication.name }} - Time Taken: {{ log.time_taken }}</li>
+            {% endfor %}
             </ul>
         {% else %}
-            <p>No sleeping data available for {{ date }}</p>
+            <p>No medication data available for {{ date }}</p>
         {% endif %}
-        <!-- Meeting Log Section -->
-        {% if meetings_logs %}
-            <h2>Meeting Log for {{ date }}</h2>
-            <ul>
-                {% for log in meetings_logs %}
-                    {% if log.date|date:"Y-m-d" == date %}
-                        <li>
-                            {{ log.date }} - 
-                            Time: {{ log.time|time:"H:i" }}, 
-                            Met People: {% if log.met_people %} Yes {% else %} No {% endif %}, 
-                            Positivity Rating: {{ log.positivity_rating }},
-                            Meeting Type: {{ log.get_meeting_type_display }}
-                        </li>
-                    {% else %}
-                        <li>No meetings logs for {{ date }}</li>
-                    {% endif %}
-                {% endfor %}
-            </ul>
-        {% else %}
-            <p>No meetings data available for {{ date }}</p>
-        {% endif %}
-        <!-- Seizure Log Section -->
-        {% if seizure_logs %}
-            <h2>Seizure Log for {{ date }}</h2>
-            <ul>
-                {% for log in seizure_logs %}
-                    {% if log.date|date:"Y-m-d" == date %}
-                        <li>
-                            {{ log.date }} - 
-                            Time: {{ log.time|time:"H:i" }}, 
-                            Duration (minutes): {{ log.duration_minutes }},
-                            Last Memory: {{ log.last_memory }}
-                        </li>
-                    {% else %}
-                        <li>No seizure logs for {{ date }}</li>
-                    {% endif %}
-                {% endfor %}
-            </ul>
-        {% else %}
-            <p>No seizure data available for {{ date }}</p>
-        {% endif %}
-        {% if medication_logs %}
-        <h2>Medication Log for {{ date }}</h2>
-        <ul>
-            {% for log in medication_logs %}
-            <li>{{ log.medication.name }} - Time Taken: {{ log.time_taken }}</li>
-        {% endfor %}
-        </ul>
-    {% else %}
-        <p>No medication data available for {{ date }}</p>
-    {% endif %}
-{%endif%}
-    
+    {%endif%}
+        
 
     {% if is_current_date %}
         <form method="POST" action="{% url 'dashboard:food_log_api' %}">

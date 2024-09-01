@@ -213,7 +213,7 @@ class SleepingLogAPIView(APIView):
         return Response({'message': 'Sleeping log deleted successfully'})
 
 
-class MeetingsAPIView(View):
+class MeetingsAPIView(APIView):
     def get(self, request, date):
         Meetings_logs = Meetings.objects.filter(user=request.user, date=date)
         serializer = MeetingsSerializer(Meetings_logs, many=True)

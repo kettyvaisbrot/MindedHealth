@@ -1,20 +1,98 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Home</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 0;
+            background-color: #f4f4f4;
+        }
+        .container {
+            max-width: 900px;
+            margin: 0 auto;
+            padding: 20px;
+            background: #fff;
+            border-radius: 8px;
+            box-shadow: 0 0 10px rgba(0,0,0,0.1);
+        }
+        h2 {
+            color: #333;
+        }
+        p {
+            margin: 0 0 10px;
+        }
+        a {
+            text-decoration: none;
+        }
+        button {
+            background-color: #007bff;
+            color: #fff;
+            border: none;
+            padding: 10px 20px;
+            margin: 5px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 16px;
+        }
+        button:hover {
+            background-color: #0056b3;
+        }
+        #search-form {
+            margin-top: 20px;
+        }
+        input[type="text"] {
+            padding: 10px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            width: calc(100% - 22px);
+            font-size: 16px;
+        }
+        .search-container {
+            display: flex;
+            flex-direction: column;
+        }
+        .search-container button {
+            margin-top: 10px;
+        }
+    </style>
 </head>
 <body>
-    <h2>Home</h2>
-    {% if user.is_authenticated %}
-        <p>Welcome, {{ user.username }}!</p>
-        <p><a href="{% url 'logout' %}">Logout</a></p>
-        <p><a href="{% url 'dashboard:dashboard_home' %}"><button>Dashboard</button></a></p>
-        <p><a href="{% url 'medications:list' %}"><button>Medications</button></a></p>
-        <p><a href="{% url 'my_statistics:statistics_view' %}"><button>Statistics</button></a></p> <!-- Link to statistics page -->
-    {% else %}
-        <p>Welcome, guest!</p>
-        <p><a href="{% url 'login' %}"><button>Login</button></a></p>
-        <p><a href="{% url 'register' %}"><button>Register</button></a></p>
-    {% endif %}
+    <div class="container">
+        <h2>Home</h2>
+        {% if user.is_authenticated %}
+            <p>Welcome, {{ user.username }}!</p>
+            <p><a href="{% url 'logout' %}"><button>Logout</button></a></p>
+            <p><a href="{% url 'dashboard:dashboard_home' %}"><button>Dashboard</button></a></p>
+            <p><a href="{% url 'medications:list' %}"><button>Medications</button></a></p>
+            <p><a href="{% url 'my_statistics:statistics_view' %}"><button>Statistics</button></a></p>
+            
+            <!-- Button to toggle search form -->
+            <button onclick="toggleSearchForm()">What interests you?</button>
+
+            <!-- Search Form -->
+            <div id="search-form" style="display:none;" class="search-container">
+                <form action="{% url 'what_interested_you:search' %}" method="get">
+                    <input type="text" name="q" placeholder="Search mental health topics" required>
+                    <button type="submit">Search</button>
+                </form>
+            </div>
+
+        {% else %}
+            <p>Welcome, guest!</p>
+            <p><a href="{% url 'login' %}"><button>Login</button></a></p>
+            <p><a href="{% url 'register' %}"><button>Register</button></a></p>
+        {% endif %}
+    </div>
+
+    <script>
+        function toggleSearchForm() {
+            var searchForm = document.getElementById('search-form');
+            searchForm.style.display = searchForm.style.display === 'none' ? 'block' : 'none';
+        }
+    </script>
 </body>
 </html>

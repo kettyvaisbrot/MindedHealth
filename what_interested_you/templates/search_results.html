@@ -1,0 +1,115 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Search Results</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 0;
+            background-color: #f4f4f4;
+        }
+        .container {
+            max-width: 900px;
+            margin: 0 auto;
+            padding: 20px;
+            background: #fff;
+            border-radius: 8px;
+            box-shadow: 0 0 10px rgba(0,0,0,0.1);
+        }
+        h1 {
+            color: #333;
+            margin-bottom: 20px;
+        }
+        a {
+            color: #007bff;
+            text-decoration: none;
+        }
+        a:hover {
+            text-decoration: underline;
+        }
+        ul {
+            list-style-type: none;
+            padding: 0;
+        }
+        ul li {
+            margin-bottom: 10px;
+        }
+        ul li a {
+            font-weight: bold;
+            color: #007bff;
+        }
+        ul li p {
+            margin: 5px 0 15px;
+            color: #555;
+        }
+        .form-container {
+            margin-top: 20px;
+        }
+        label {
+            font-size: 16px;
+            color: #333;
+            margin-right: 10px;
+        }
+        select, input[type="hidden"] {
+            padding: 10px;
+            font-size: 16px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            margin-right: 10px;
+        }
+        button {
+            background-color: #007bff;
+            color: #fff;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 16px;
+        }
+        button:hover {
+            background-color: #0056b3;
+        }
+        .back-home {
+            margin-top: 20px;
+            display: inline-block;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Search Results for "{{ query }}"</h1>
+
+        <a class="back-home" href="{% url 'home' %}">Back to Home</a>
+
+        {% if results %}
+            <ul>
+            {% for result in results %}
+                <li>
+                    <a href="{{ result.link }}">{{ result.title }}</a>
+                    <p>{{ result.snippet }}</p>
+                </li>
+            {% endfor %}
+            </ul>
+        {% else %}
+            <p>No results found.</p>
+        {% endif %}
+
+        <div class="form-container">
+            <form method="get" action="{% url 'what_interested_you:search' %}">
+                <input type="hidden" name="q" value="{{ query }}">
+                <label for="interest">What are you more interested in?</label>
+                <select name="interest" id="interest">
+                    <option value="">--Select--</option>
+                    <option value="symptoms" {% if interest == 'symptoms' %}selected{% endif %}>Symptoms</option>
+                    <option value="treatments" {% if interest == 'treatments' %}selected{% endif %}>Treatments</option>
+                    <option value="tips" {% if interest == 'tips' %}selected{% endif %}>Tips</option>
+                </select>
+                <button type="submit">Refine Search</button>
+            </form>
+        </div>
+    </div>
+</body>
+</html>

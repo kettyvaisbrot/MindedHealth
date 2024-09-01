@@ -30,6 +30,7 @@ def statistics_view(request):
     sleep_stats = get_sleeping_statistics(request.user, selected_year, selected_month)
     meeting_stats = get_meeting_statistics(request.user, selected_year, selected_month)
     seizure_stats = get_seizure_statistics(request.user, selected_year, selected_month)
+    seizure_stats_with_events = get_seizure_statistics_with_previous_event(request.user, selected_year, selected_month)
 
     context = {
         'breakfast_stats': breakfast_stats,
@@ -42,6 +43,7 @@ def statistics_view(request):
         'current_month': selected_month,
         'current_year': selected_year,
         'month_choices': month_choices,
+        'seizure_stats_with_events': seizure_stats_with_events,
     }
 
     return render(request, 'my_statistics/statistics.html', context)
@@ -236,3 +238,38 @@ def get_seizure_statistics(user, year, month):
         'avg_seizure_time': avg_seizure_time,
         'avg_seizure_duration': avg_seizure_duration,
     }
+
+def get_previous_event(user, date, time):
+    food_log = FoodLog.objects.filter(user=user, date=date, time__lt=time).order_by('-time').first()
+    sport_log = SportLog.objects.filter(user=user, date=date, time__lt=time).order_by('-time').first()
+    meeting_log = Meetings.objects.filter(user=user, date=date, time__lt=time).order_by('-time').first()
+    
+    events = [food_log, sport_log, meeting_log]
+    events = [event for event in events if event is not None]
+    
+    if not events:
+        return None, None
+
+    previous_event = max(events, key=lambda event: event.time)
+    if isinstance(previous_event, FoodLog):
+        return "Food", previous_event
+    elif isinstance(previous_event, SportLog):
+        return "Sport", previous_event
+    elif isinstance(previous_event, Meetings):
+        return "Meeting", previous_event
+    else:
+        return None, None
+
+def get_seizure_statistics_with_previous_event(user, year, month):
+    seizures = SeizureLog.objects.filter(user=user, date__year=year, date__month=month)
+    
+    seizures_data = []
+    for seizure in seizures:
+        event_type, previous_event = get_previous_event(user, seizure.date, seizure.time)
+        seizures_data.append({
+            'seizure': seizure,
+            'previous_event_type': event_type,
+            'previous_event': previous_event
+        })
+    
+    return seizures_data
