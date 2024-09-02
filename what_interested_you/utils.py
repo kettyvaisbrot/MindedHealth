@@ -1,7 +1,7 @@
 # utils.py
 
 import requests
-
+import os
 def fetch_search_results(query):
     GOOGLE_SEARCH_API_KEY = os.getenv('GOOGLE_SEARCH_API_KEY')
     GOOGLE_SEARCH_CSE_ID = os.getenv('GOOGLE_SEARCH_CSE_ID')
