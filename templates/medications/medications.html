@@ -1,9 +1,10 @@
+<!-- templates/medications/medications.html -->
 <!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>My Medications</title>
+    <title>Your Medications</title>
     <style>
         body {
             font-family: Arial, sans-serif;
@@ -19,26 +20,21 @@
             border-radius: 8px;
             box-shadow: 0 0 10px rgba(0,0,0,0.1);
         }
-        h1 {
+        h2 {
             color: #333;
         }
-        form {
-            margin-bottom: 20px;
+        p {
+            margin: 0 0 10px;
         }
-        input[type="text"], input[type="number"] {
-            padding: 10px;
-            border: 1px solid #ddd;
-            border-radius: 4px;
-            width: calc(100% - 22px);
-            font-size: 16px;
-            margin-bottom: 10px;
+        a {
+            text-decoration: none;
         }
         button {
             background-color: #007bff;
             color: #fff;
             border: none;
             padding: 10px 20px;
-            margin: 5px 0;
+            margin: 5px;
             border-radius: 4px;
             cursor: pointer;
             font-size: 16px;
@@ -46,118 +42,139 @@
         button:hover {
             background-color: #0056b3;
         }
-        ul {
-            list-style-type: none;
-            padding: 0;
-        }
-        ul li {
-            padding: 10px;
-            background: #f9f9f9;
-            border: 1px solid #ddd;
-            margin-bottom: 5px;
-            border-radius: 4px;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-        }
-        ul li button {
-            background-color: #dc3545;
-            border: none;
-            padding: 5px 10px;
-            border-radius: 4px;
-            font-size: 14px;
-            color: #fff;
-            cursor: pointer;
-        }
-        ul li button:hover {
-            background-color: #c82333;
-        }
-        .back-home {
+        #search-form {
             margin-top: 20px;
+        }
+        input[type="text"] {
+            padding: 10px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            width: calc(100% - 22px);
+            font-size: 16px;
+        }
+        .search-container {
+            display: flex;
+            flex-direction: column;
+        }
+        .search-container button {
+            margin-top: 10px;
         }
     </style>
 </head>
 <body>
-    <div class="container">
-        <h1>My Medications</h1>
-        <form id="medication-form">
-            <input type="text" name="name" placeholder="Medication Name" required>
-            <input type="number" name="times_per_day" placeholder="Times per Day" required>
-            <input type="text" name="dose" placeholder="Dose" required>
-            <button type="submit">Add Medication</button>
-        </form>
-
-        <ul id="medication-list"></ul>
-
-        <p class="back-home"><a href="{% url 'home' %}"><button>Back to Home</button></a></p>
+    <h1>Your Medications</h1>
+    <!-- Back to Home button -->
+    <p>
+        <a href="{% url 'home' %}"><button>Back to Home</button></a>
+    </p>
+        
+    <a href="{% url 'medications:add_medication' %}">Add Medication</a>
+    <ul>
+        {% for medication in medications %}
+            <li>
+                {{ medication.name }} ({{ medication.dose }}) - {{ medication.times_per_day }} times per day
+                <br>
+                Scheduled Times: 
+                {% if medication.dose_times %}
+                    {{ medication.dose_times|join:', ' }}
+                {% else %}
+                    No scheduled times set.
+                {% endif %}
+                <br>
+                <a href="{% url 'medications:edit_medication' medication.pk %}">Edit</a>
+                <a href="{% url 'medications:delete_medication' medication.pk %}">Delete</a>
+            </li>
+        {% empty %}
+            <li>No medications found.</li>
+        {% endfor %}
+    </ul>
+    <!-- Warning Modal -->
+    <div id="logoutWarning" style="display: none; position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); padding: 20px; border: 1px solid #ccc; background: #fff; z-index: 1000; text-align: center;">
+        <p>You will be logged out in 30 seconds due to inactivity.</p>
+        <button onclick="stayOnSite()">Stay Logged In</button>
+        <button onclick="logOut()">Log Out</button>
     </div>
 
     <script>
-        document.addEventListener('DOMContentLoaded', function() {
-            const medicationForm = document.getElementById('medication-form');
-            const medicationList = document.getElementById('medication-list');
+        let warningTimer;
 
-            function fetchMedications() {
-                fetch('/medications/api/medications/')
-                    .then(response => response.json())
-                    .then(data => {
-                        medicationList.innerHTML = '';
-                        data.forEach(med => {
-                            const li = document.createElement('li');
-                            li.textContent = `${med.name} (${med.times_per_day} times/day, ${med.dose})`;
+        function showWarning() {
+            document.getElementById("logoutWarning").style.display = "block";
+        }
 
-                            const button = document.createElement('button');
-                            button.textContent = 'Remove';
-                            button.setAttribute('data-id', med.id);
-                            button.classList.add('delete-medication');
+        function stayOnSite() {
+            document.getElementById("logoutWarning").style.display = "none";
 
-                            li.appendChild(button);
-                            medicationList.appendChild(li);
-                        });
-                    });
-            }
+            // Reset session or activity timers
+            fetch('/keep-alive/', { method: 'GET' })
+                .then(response => console.log('Session extended'))
+                .catch(error => console.error('Error extending session:', error));
 
-            medicationForm.addEventListener('submit', function(e) {
-                e.preventDefault();
-                const formData = new FormData(medicationForm);
-                fetch('/medications/api/medications/', {
-                    method: 'POST',
-                    body: JSON.stringify({
-                        name: formData.get('name'),
-                        times_per_day: formData.get('times_per_day'),
-                        dose: formData.get('dose'),
-                        user: '{{ request.user.id }}'  // Add the user ID here if needed
-                    }),
-                    headers: {
-                        'Content-Type': 'application/json',
-                        'X-CSRFToken': '{{ csrf_token }}'
-                    }
-                }).then(() => {
-                    medicationForm.reset();
-                    fetchMedications();
-                }).catch(error => {
-                    console.error('Error adding medication:', error);
-                });
-            });
+            // Restart the warning timer
+            startWarningTimer();
+        }
 
-            medicationList.addEventListener('click', function(e) {
-                if (e.target.classList.contains('delete-medication')) {
-                    const medicationId = e.target.getAttribute('data-id');
-                    fetch(`/medications/api/medications/${medicationId}/`, {
-                        method: 'DELETE',
-                        headers: {
-                            'X-CSRFToken': '{{ csrf_token }}'
-                        }
-                    }).then(() => {
-                        fetchMedications();
-                    }).catch(error => {
-                        console.error('Error deleting medication:', error);
-                    });
-                }
-            });
+        function logOut() {
+            window.location.href = '/logout/';
+        }
 
-            fetchMedications();
-        });
+        function startWarningTimer() {
+            // Adjust this to be 90 seconds if the total logout is 120 seconds
+            warningTimer = setTimeout(showWarning, 90000); // Show warning 30 seconds before logout
+        }
+
+        // Start the warning timer on page load
+        startWarningTimer();
     </script>
+
+    <script>
+        // Define a timeout for 2 minutes (120,000 milliseconds)
+        let timeoutDuration = 120000; // 2 minutes
+        let logoutUrl = "/logout/";
+
+        // Reset the timeout on user activity
+        function resetTimeout() {
+            clearTimeout(logoutTimer);
+            logoutTimer = setTimeout(logoutUser, timeoutDuration);
+        }
+
+        // Function to send POST request for logout
+        function logoutUser() {
+            fetch(logoutUrl, {
+                method: 'POST', // Ensure this is a POST request
+                headers: {
+                    'X-CSRFToken': getCookie('csrftoken'), // Add CSRF token
+                }
+            })
+            .then(response => {
+                if (response.redirected) {
+                    window.location.href = response.url; // Redirect after logout
+                }
+            })
+            .catch(error => console.error('Logout error:', error));
+        }
+
+        // Function to get CSRF token from cookies
+        function getCookie(name) {
+            let cookieValue = null;
+            if (document.cookie && document.cookie !== '') {
+                const cookies = document.cookie.split(';');
+                for (let i = 0; i < cookies.length; i++) {
+                    const cookie = cookies[i].trim();
+                    if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                        cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                        break;
+                    }
+                }
+            }
+            return cookieValue;
+        }
+
+        // Set the initial logout timer and listen for activity
+        let logoutTimer = setTimeout(logoutUser, timeoutDuration);
+        document.addEventListener('mousemove', resetTimeout);
+        document.addEventListener('keypress', resetTimeout);
+    </script>
+    
 </body>
 </html>

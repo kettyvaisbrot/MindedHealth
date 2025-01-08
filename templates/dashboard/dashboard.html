@@ -1,3 +1,5 @@
+{% load custom_filters %}
+
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -90,6 +92,11 @@
 </head>
 <body>
     <div class="container">
+        {% if messages %}
+            {% for message in messages %}
+                <div class="alert alert-warning">{{ message }}</div>
+            {% endfor %}
+        {% endif %}
         <h1>Dashboard</h1>
         <!-- Back Button -->
         <div class="back-button">
@@ -119,6 +126,23 @@
             {% else %}
                 <p>No food data available for {{ date }}</p>
             {% endif %}
+            {% if medication_logs %}
+                <h2>Medication Log for {{ date }}</h2>
+                <ul>
+                    {% for log in medication_logs %}
+                        <li>
+                            Medication: {{ log.medication.name }} - 
+                            Times Taken: 
+                            {{ log.time_taken|time:"h:i A" }}
+                        </li>
+                    {% endfor %}
+                </ul>
+            {% else %}
+                <p>No medication data available for {{ date }}</p>
+            {% endif %}
+            
+        
+
             <!-- Sport Log Section -->
             {% if sport_logs %}
                 <h2>Sport Log for {{ date }}</h2>
@@ -148,8 +172,8 @@
                     {% for log in sleeping_logs %}
                         <li>
                             {{ log.date }} - 
+                            Wake Time: {{ log.wake_up_time|time:"H:i" }}, 
                             Sleep Time: {{ log.sleep_time|time:"H:i" }}, 
-                            Wake Time: {{ log.wake_time|time:"H:i" }}, 
                             Woke Up During Night: {% if log.woke_up_during_night %}Yes{% else %}No{% endif %}
                         </li>
                     {% endfor %}
@@ -188,7 +212,6 @@
                                 {{ log.date }} - 
                                 Time: {{ log.time|time:"H:i" }}, 
                                 Duration (minutes): {{ log.duration_minutes }},
-                                Last Memory: {{ log.last_memory }}
                             </li>
                         {% else %}
                             <li>No seizure logs for {{ date }}</li>
@@ -198,23 +221,15 @@
             {% else %}
                 <p>No seizure data available for {{ date }}</p>
             {% endif %}
-            {% if medication_logs %}
-            <h2>Medication Log for {{ date }}</h2>
-            <ul>
-                {% for log in medication_logs %}
-                <li>{{ log.medication.name }} - Time Taken: {{ log.time_taken }}</li>
-            {% endfor %}
-            </ul>
-        {% else %}
-            <p>No medication data available for {{ date }}</p>
-        {% endif %}
+
+            
     {%endif%}
         
 
     {% if is_current_date %}
         <form method="POST" action="{% url 'dashboard:food_log_api' %}">
             {% csrf_token %}
-            <input type="hidden" name="date" value="{{ date }}">
+            <input type="hidden" name="date" value="{{ date|date:'Y-m-d' }}">
             <input type="hidden" name="user" value="{{ request.user.id }}">
             <label for="breakfast_ate">Breakfast Ate:</label>
             <input type="checkbox" id="breakfast_ate" name="breakfast_ate" {% if food_logs and food_logs.0.breakfast_ate %}checked{% endif %}>
@@ -238,7 +253,7 @@
         </form>
         <form method="POST" action="{% url 'dashboard:sport_log_api' date=date %}">
             {% csrf_token %}
-            <input type="hidden" name="date" value="{{ date }}">
+            <input type="hidden" name="date" value="{{ date|date:'Y-m-d' }}">
             <input type="hidden" name="user" value="{{ request.user.id }}">
             <label for="did_sport">Did Sport:</label>
             <input type="checkbox" id="did_sport" name="did_sport" {% if sport_logs and sport_logs.0.did_sport %}checked{% endif %}>
@@ -262,13 +277,13 @@
         <!-- Sleeping Log Form -->
         <form method="POST" action="{% url 'dashboard:sleeping_log_api' %}">
             {% csrf_token %}
-            <input type="hidden" name="date" value="{{ date }}">
+            <input type="hidden" name="date" value="{{ date|date:'Y-m-d' }}">
             <input type="hidden" name="user" value="{{ request.user.id }}">
+            <label for="wake_up_time">Wake Time:</label>
+            <input type="time" id="wake_up_time" name="wake_up_time" value="{% if sleeping_logs %}{{ sleeping_logs.0.wake_up_time|time:'H:i' }}{% endif %}">
+            <br>
             <label for="sleep_time">Sleep Time:</label>
             <input type="time" id="sleep_time" name="sleep_time" value="{% if sleeping_logs %}{{ sleeping_logs.0.sleep_time|time:'H:i' }}{% endif %}">
-            <br>
-            <label for="wake_time">Wake Time:</label>
-            <input type="time" id="wake_time" name="wake_time" value="{% if sleeping_logs %}{{ sleeping_logs.0.wake_time|time:'H:i' }}{% endif %}">
             <br>
             <label for="woke_up_during_night">Woke Up During Night:</label>
             <input type="checkbox" id="woke_up_during_night" name="woke_up_during_night" {% if sleeping_logs and sleeping_logs.0.woke_up_during_night %}checked{% endif %}>
@@ -277,7 +292,7 @@
         </form>        
         <form method="POST" action="{% url 'dashboard:meetings_log_api' %}">
             {% csrf_token %}
-            <input type="hidden" name="date" value="{{ date }}">
+            <input type="hidden" name="date" value="{{ date|date:'Y-m-d' }}">
             <input type="hidden" name="user" value="{{ request.user.id }}">
             <label for="time">Time:</label>
             <input type="time" id="time" name="time" value="{% if meetings_logs %}{{ meetings_logs.0.time|time:'H:i' }}{% endif %}">
@@ -297,39 +312,135 @@
             </select>
             <br>
             <button type="submit">Save</button>
-        </form>
-        <form method="POST" action="{% url 'dashboard:seizure_logs_api' %}">
+        </form>  
+        <h2>Medication Documentation</h2>
+        <form method="post" action="{% url 'dashboard:log_medication' date=date|date:'Y-m-d' %}">
             {% csrf_token %}
-            <input type="hidden" name="date" value="{{ date }}">
-            <input type="hidden" name="user" value="{{ request.user.id }}">
-            <label for="seizure_time">Time:</label>
-            <input type="time" id="seizure_time" name="time" value="{% if seizure_logs %}{{ seizure_logs.0.seizure_time|time:'H:i' }}{% endif %}">
-            <br>
-            <label for="duration_minutes">Duration (minutes):</label>
-            <input type="number" id="duration_minutes" name="duration_minutes" value="{% if seizure_logs %}{{ seizure_logs.0.duration_minutes }}{% endif %}">
-            <br>
-            <label for="last_memory">Last Memory:</label>
-            <textarea id="last_memory" name="last_memory">{% if seizure_logs %}{{ seizure_logs.0.last_memory }}{% endif %}</textarea>
-            <br>
-            <button type="submit">Save</button>
+            <input type="hidden" name="date" value="{{ date|date:'Y-m-d' }}">
+            
+            <label for="medication">Select Medication:</label>
+            <select name="medication" required>
+                {% for med in request.user.medication_set.all %}
+                    <option value="{{ med.id }}">{{ med.name }}</option>
+                {% endfor %}
+            </select>
+            
+            <label>Times Taken:</label>
+            <div id="time-fields">
+                <input type="time" name="time_taken" required>
+            </div>
+            
+            <button type="button" onclick="addTimeField()">Add Another Time</button>
+            
+            <button type="submit">Log Medication</button>
         </form>
-        <h3>Medications</h3>
-        <form method="POST" action="{% url 'medications:add_medication_log' %}">
-          {% csrf_token %}
-          {% for medication in medications %}
-          <h4>{{ medication.name }}</h4>
-          <input type="hidden" name="date" value="{{ date }}">
-          <input type="hidden" name="user" value="{{ request.user.id }}">
-          <input type="hidden" name="medication_id" value="{{ medication.id }}">
-          {% for i in times_per_day_range %}
-          <input type="checkbox" id="medication_{{ medication.id }}_{{ i }}" name="medication_{{ medication.id }}_{{ i }}">
-          <label for="medication_{{ medication.id }}_{{ i }}">Time {{ i|add:1 }}</label>
-          <input type="time" id="time_{{ medication.id }}_{{ i }}" name="time_{{ medication.id }}_{{ i }}">
-          <br>
-          {% endfor %}
-          {% endfor %}
-          <button type="submit">Save Medication Log</button>
-        </form>
+        
+        <h3>Logged Medications for {{ date }}:</h3>
+        <ul>
+            {% for log in medication_logs %}
+                <li>{{ log.medication.name }} - {{ log.time_taken }} (Dose {{ log.dose_index }})</li>
+            {% endfor %}
+        </ul>
+            <!-- Warning Modal -->
+    <div id="logoutWarning" style="display: none; position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); padding: 20px; border: 1px solid #ccc; background: #fff; z-index: 1000; text-align: center;">
+        <p>You will be logged out in 30 seconds due to inactivity.</p>
+        <button onclick="stayOnSite()">Stay Logged In</button>
+        <button onclick="logOut()">Log Out</button>
+    </div>
+
+    <script>
+        let warningTimer;
+
+        function showWarning() {
+            document.getElementById("logoutWarning").style.display = "block";
+        }
+
+        function stayOnSite() {
+            document.getElementById("logoutWarning").style.display = "none";
+
+            // Reset session or activity timers
+            fetch('/keep-alive/', { method: 'GET' })
+                .then(response => console.log('Session extended'))
+                .catch(error => console.error('Error extending session:', error));
+
+            // Restart the warning timer
+            startWarningTimer();
+        }
+
+        function logOut() {
+            window.location.href = '/logout/';
+        }
+
+        function startWarningTimer() {
+            // Adjust this to be 90 seconds if the total logout is 120 seconds
+            warningTimer = setTimeout(showWarning, 90000); // Show warning 30 seconds before logout
+        }
+
+        // Start the warning timer on page load
+        startWarningTimer();
+    </script>
+
+        <script>
+            function addTimeField() {
+                const timeFields = document.getElementById("time-fields");
+                const newTimeField = document.createElement("input");
+                newTimeField.type = "time";
+                newTimeField.name = "time_taken";  // Keep the same name for multiple time inputs
+                newTimeField.required = true;
+                timeFields.appendChild(newTimeField);
+            }
+        </script>
+        
+                 
     {% endif %}
+    <script>
+        // Define a timeout for 2 minutes (120,000 milliseconds)
+        let timeoutDuration = 120000; // 2 minutes
+        let logoutUrl = "/logout/";
+
+        // Reset the timeout on user activity
+        function resetTimeout() {
+            clearTimeout(logoutTimer);
+            logoutTimer = setTimeout(logoutUser, timeoutDuration);
+        }
+
+        // Function to send POST request for logout
+        function logoutUser() {
+            fetch(logoutUrl, {
+                method: 'POST', // Ensure this is a POST request
+                headers: {
+                    'X-CSRFToken': getCookie('csrftoken'), // Add CSRF token
+                }
+            })
+            .then(response => {
+                if (response.redirected) {
+                    window.location.href = response.url; // Redirect after logout
+                }
+            })
+            .catch(error => console.error('Logout error:', error));
+        }
+
+        // Function to get CSRF token from cookies
+        function getCookie(name) {
+            let cookieValue = null;
+            if (document.cookie && document.cookie !== '') {
+                const cookies = document.cookie.split(';');
+                for (let i = 0; i < cookies.length; i++) {
+                    const cookie = cookies[i].trim();
+                    if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                        cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                        break;
+                    }
+                }
+            }
+            return cookieValue;
+        }
+
+        // Set the initial logout timer and listen for activity
+        let logoutTimer = setTimeout(logoutUser, timeoutDuration);
+        document.addEventListener('mousemove', resetTimeout);
+        document.addEventListener('keypress', resetTimeout);
+    </script>
+    
 </body>
 </html>

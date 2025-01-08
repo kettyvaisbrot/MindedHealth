@@ -76,6 +76,21 @@
         <p>Average Sleep Time: {% if sleep_stats.avg_sleep_time %}{{ sleep_stats.avg_sleep_time }}{% else %}No data{% endif %}</p>
         <p>Nights Awake Count: {% if sleep_stats.nights_awake_count %}{{ sleep_stats.nights_awake_count }}{% else %}No data{% endif %}</p>
 
+        <tbody>
+            {% if sleep_durations %}
+                {% for date, duration in sleep_durations.items %}
+                    <tr>
+                        <td>{{ date }}</td>
+                        <td>{{ duration.days }} days, {{ duration.hours }} hours, {{ duration.minutes }} minutes</td>
+                    </tr>
+                {% endfor %}
+            {% else %}
+                <tr>
+                    <td colspan="2">No sleep data available.</td>
+                </tr>
+            {% endif %}
+        </tbody>
+        
         <h2>Meeting Statistics</h2>
         <p>Number of Meetings: {% if meeting_stats.meetings_count %}{{ meeting_stats.meetings_count }}{% else %}No data{% endif %}</p>
         <p>Meeting Type with Lowest Positivity Rating: {% if meeting_stats.lowest_rating_type %}{{ meeting_stats.lowest_rating_type }} (Rating: {{ meeting_stats.lowest_rating }}){% else %}No data{% endif %}</p>
@@ -85,6 +100,59 @@
         <p>Number of Seizures: {% if seizure_stats.seizures_count %}{{ seizure_stats.seizures_count }}{% else %}No data{% endif %}</p>
         <p>Average Time of Seizure Occurrence: {% if seizure_stats.avg_seizure_time %}{{ seizure_stats.avg_seizure_time }}{% else %}No data{% endif %}</p>
         <p>Average Duration of Seizures: {% if seizure_stats.avg_seizure_duration %}{{ seizure_stats.avg_seizure_duration }} minutes{% else %}No data{% endif %}</p>
+
+        <h2>Seizure Events</h2>
+        {% if seizure_statistics %}
+            <ul>
+                {% for entry in seizure_statistics %}
+                    <li>
+                        <strong>Date:</strong> {{ entry.seizure.date }}<br>
+                        <strong>Time:</strong> {{ entry.seizure.time }}<br>
+                        <strong>Previous Event Type:</strong> {{ entry.previous_event_type }}<br>
+                        <strong>Previous Event Details:</strong>
+                        {% if entry.previous_event %}
+                            {% if entry.previous_event_type == 'Food' %}
+                                {% if entry.previous_event.breakfast_time %}
+                                    <span>Breakfast: {{ entry.previous_event.breakfast_time }}</span>
+                                {% endif %}
+                                {% if entry.previous_event.lunch_time %}
+                                    <span>Lunch: {{ entry.previous_event.lunch_time }}</span>
+                                {% endif %}
+                                {% if entry.previous_event.dinner_time %}
+                                    <span>Dinner: {{ entry.previous_event.dinner_time }}</span>
+                                {% endif %}
+                            {% elif entry.previous_event_type == 'Sport' %}
+                                <span>{{ entry.previous_event.sport_time }}</span>
+                            {% elif entry.previous_event_type == 'Meeting' %}
+                                <span>{{ entry.previous_event.time }}</span>
+                            {% endif %}
+                        {% else %}
+                            No previous event
+                        {% endif %}
+                    </li>
+                {% endfor %}
+            </ul>
+        {% else %}
+            <p>No seizures logged for this month.</p>
+        {% endif %}
+
+        <h2>Medication Statistics</h2>
+        {% if medication_statistics %}
+            {% for stat in medication_statistics %}
+                <h3>{{ stat.medication }}:</h3>
+                <p>Days Medication Missed: {{ stat.days_missed }}</p>
+                <h4>Missed Days:</h4>
+                <ul>
+                    {% for missed_day in stat.missed_days_list %}
+                        <li>{{ missed_day|date:"l, F j, Y" }}</li>
+                    {% endfor %}
+                </ul>
+            {% endfor %}
+        {% else %}
+            <p>No medication data available for this month.</p>
+        {% endif %}
+
+
 
         <h2>Select Month and Year</h2>
         <form method="GET" action="{% url 'my_statistics:statistics_view' %}">
@@ -101,5 +169,94 @@
 
         <p><a href="{% url 'home' %}"><button>Back to Home</button></a></p>
     </div>
+        <!-- Warning Modal -->
+    <div id="logoutWarning" style="display: none; position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); padding: 20px; border: 1px solid #ccc; background: #fff; z-index: 1000; text-align: center;">
+        <p>You will be logged out in 30 seconds due to inactivity.</p>
+        <button onclick="stayOnSite()">Stay Logged In</button>
+        <button onclick="logOut()">Log Out</button>
+    </div>
+
+    <script>
+        let warningTimer;
+
+        function showWarning() {
+            document.getElementById("logoutWarning").style.display = "block";
+        }
+
+        function stayOnSite() {
+            document.getElementById("logoutWarning").style.display = "none";
+
+            // Reset session or activity timers
+            fetch('/keep-alive/', { method: 'GET' })
+                .then(response => console.log('Session extended'))
+                .catch(error => console.error('Error extending session:', error));
+
+            // Restart the warning timer
+            startWarningTimer();
+        }
+
+        function logOut() {
+            window.location.href = '/logout/';
+        }
+
+        function startWarningTimer() {
+            // Adjust this to be 90 seconds if the total logout is 120 seconds
+            warningTimer = setTimeout(showWarning, 90000); // Show warning 30 seconds before logout
+        }
+
+        // Start the warning timer on page load
+        startWarningTimer();
+    </script>
+
+    <script>
+        // Define a timeout for 2 minutes (120,000 milliseconds)
+        let timeoutDuration = 120000; // 2 minutes
+        let logoutUrl = "/logout/";
+
+        // Reset the timeout on user activity
+        function resetTimeout() {
+            clearTimeout(logoutTimer);
+            logoutTimer = setTimeout(logoutUser, timeoutDuration);
+        }
+
+        // Function to send POST request for logout
+        function logoutUser() {
+            fetch(logoutUrl, {
+                method: 'POST', // Ensure this is a POST request
+                headers: {
+                    'X-CSRFToken': getCookie('csrftoken'), // Add CSRF token
+                }
+            })
+            .then(response => {
+                if (response.redirected) {
+                    window.location.href = response.url; // Redirect after logout
+                }
+            })
+            .catch(error => console.error('Logout error:', error));
+        }
+
+        // Function to get CSRF token from cookies
+        function getCookie(name) {
+            let cookieValue = null;
+            if (document.cookie && document.cookie !== '') {
+                const cookies = document.cookie.split(';');
+                for (let i = 0; i < cookies.length; i++) {
+                    const cookie = cookies[i].trim();
+                    if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                        cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                        break;
+                    }
+                }
+            }
+            return cookieValue;
+        }
+
+        // Set the initial logout timer and listen for activity
+        let logoutTimer = setTimeout(logoutUser, timeoutDuration);
+        document.addEventListener('mousemove', resetTimeout);
+        document.addEventListener('keypress', resetTimeout);
+    </script>
+    
+    
 </body>
 </html>

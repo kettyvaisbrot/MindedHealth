@@ -24,9 +24,13 @@ urlpatterns = [
     path('', views.home, name='home'),
     path('register/', views.register, name='register'),
     path('login/', views.login_view, name='login'),
-    path('logout/', views.logout_view, name='logout'),
+    path('logout/', views.custom_logout_view, name='logout'),
     path('medications/', include('medications.urls', namespace='medications')),  
     path('my_statistics/', include(('my_statistics.urls', 'my_statistics'), namespace='my_statistics')), 
     path('what_interested_you/', include('what_interested_you.urls')),
+    path('keep-alive/', views.keep_alive, name='keep_alive'),
+    path('chat/<str:room_name>/', views.room, name='chat_room'),  # Add chat view
+
+
 ]
 

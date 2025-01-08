@@ -1,8 +1,6 @@
 from django.db import models
 from django.contrib.auth.models import User
-from datetime import date
-
-# Create your models here.
+from django.utils import timezone
 
 class FoodLog(models.Model):
     MEAL_CHOICES = [
@@ -44,17 +42,25 @@ class SportLog(models.Model):
             return f"Sport Log on {self.date} at {self.sport_time.strftime('%H:%M')} for {self.user.username}"
         else:
             return f"Sport Log on {self.date} for {self.user.username}"
-        
+from django.db import models
+from django.contrib.auth.models import User
+from django.utils import timezone
+
+def get_tomorrow_date():
+    return timezone.now().date() + timezone.timedelta(days=1)
+
+
+
 class SleepingLog(models.Model):
     user = models.ForeignKey(User, on_delete=models.CASCADE)
-    date = models.DateField()
-    sleep_time = models.TimeField()
-    wake_time = models.TimeField()
-    woke_up_during_night = models.BooleanField(default=False)
+    date = models.DateField(auto_now_add=True)
+    sleep_time = models.TimeField(blank=True, null=True)  # Allows null values
+    wake_up_time = models.TimeField(blank=True, null=True) 
+    woke_up_during_night = models.BooleanField(default=False)  # Add this line
+
 
     def __str__(self):
-        return f"{self.user.username}'s sleep on {self.date}"
-        
+        return f"{self.date} - Sleep Time: {self.sleep_time} - Wake Up Time: {self.wake_up_time}"
 
 class Meetings(models.Model):
     MEETING_TYPES_CHOICES = [
@@ -80,7 +86,6 @@ class SeizureLog(models.Model):
     date = models.DateField()
     time = models.TimeField(null=True, blank=True)
     duration_minutes = models.PositiveIntegerField()
-    last_memory = models.TextField()
 
     def __str__(self):
             return f"Seizure at {self.date} {self.time}"

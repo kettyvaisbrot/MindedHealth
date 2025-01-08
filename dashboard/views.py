@@ -1,11 +1,7 @@
-from rest_framework.renderers import JSONRenderer
-from django.utils.decorators import method_decorator
-from django.views.decorators.csrf import csrf_exempt
-from django.shortcuts import render, redirect
+from django.shortcuts import render,get_object_or_404
 from django.http import JsonResponse, HttpResponseRedirect
 from django.views import View
 import datetime
-from medications.models import Medication, MedicationLog
 import json
 import requests
 from .models import FoodLog, SportLog, SleepingLog, Meetings, SeizureLog
@@ -13,67 +9,113 @@ from .serializers import (
     FoodLogSerializer, SportLogSerializer, SleepingLogSerializer, 
     MeetingsSerializer, SeizureLogSerializer
 )
+from django.contrib import messages
+from datetime import datetime
+from django.utils import timezone
+from django.db import models
+from django.db.models import Max
+from django.contrib.auth.decorators import login_required
+from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework import status
-from django.shortcuts import get_object_or_404
-from rest_framework.views import APIView
-from rest_framework.permissions import IsAuthenticated
 from django.urls import reverse
+from rest_framework.permissions import IsAuthenticated
+from medications.models import MedicationLog, Medication
+from medications.serializers import MedicationLogSerializer
 from django.views.generic import View
-from rest_framework.decorators import api_view
-from django.shortcuts import HttpResponseRedirect
-from django.utils import timezone
-
-
-
-
 
 def dashboard_home(request):
-    date = request.GET.get('date')
-    context = {}
-    # Get the choices for meeting_type from the Meetings model
-    meeting_type_choices = Meetings.MEETING_TYPES_CHOICES
-    if date:
-        context['date'] = date
-        context['today'] = timezone.now().date().strftime('%Y-%m-%d')
-        food_logs = FoodLog.objects.filter(user=request.user, date=date)
-        sport_logs = SportLog.objects.filter(user=request.user, date=date)
-        sleeping_logs = SleepingLog.objects.filter(user=request.user, date=date)
-        meetings_logs = Meetings.objects.filter(user=request.user, date=date)
-        meeting_type_choices = Meetings.MEETING_TYPES_CHOICES
-        seizure_logs = SeizureLog.objects.filter(user=request.user, date=date)
-        medications = Medication.objects.filter(user=request.user)
-        if medications.exists():
-            times_per_day_range = range(max(medications.values_list('times_per_day', flat=True)))
-        else:
-            times_per_day_range = [0]
-        medication_logs = MedicationLog.objects.filter(user=request.user, date=date)
+    # Get date from request, or set it to empty if not provided
+    date_str = request.GET.get('date', '')
+    today = timezone.now().date().strftime('%Y-%m-%d')    
 
-        # Prepare data to checkboxes and time inputs
-        medication_log_data = {}
-        for log in medication_logs:
-            if log.medication.id not in medication_log_data:
-                medication_log_data[log.medication.id] = []
-            medication_log_data[log.medication.id].append(log.time_taken)
-        context['food_logs'] = food_logs
-        context['sport_logs'] = sport_logs
-        context['sleeping_logs'] = sleeping_logs
-        context['meetings_logs'] = meetings_logs
-        context['is_current_date'] = (date == context['today'])
-        context['meeting_type_choices'] = meeting_type_choices
-        context['seizure_logs'] = seizure_logs
-        context['sport_choices'] = SportLog.SPORT_CHOICES
-        context['medications'] = medications
-        context['medication_logs'] = medication_logs
-        context['medication_log_data'] = medication_log_data
-        context['times_per_day_range'] = times_per_day_range
-        context['seizure_logs'] = seizure_logs
+    
+    # Check if date is provided and valid
+    if not date_str:
+        messages.warning(request, "Date is required before displaying data.")
+        return render(request, 'dashboard/dashboard.html')  # Redirect to the same page
+
+    # Validate date format
+    try:
+        date = datetime.strptime(date_str, '%Y-%m-%d').date()
+    except ValueError:
+        messages.warning(request, "Invalid date format. Please use YYYY-MM-DD.")
+        return render(request, 'dashboard/dashboard.html')
+
+    # If date is valid, proceed to query logs   
+    context = {}
+    food_logs = FoodLog.objects.filter(user=request.user, date=date)
+    sport_logs = SportLog.objects.filter(user=request.user, date=date)
+    sleeping_logs = SleepingLog.objects.filter(user=request.user, date=date)
+    meetings_logs = Meetings.objects.filter(user=request.user, date=date)
+    seizure_logs = SeizureLog.objects.filter(user=request.user, date=date)
+    medication_logs = MedicationLog.objects.filter(user=request.user, date=date).select_related('medication')
+
+ 
+    # Populate context with data
+    context['date'] = date
+    context['today'] = today
+    context['food_logs'] = food_logs
+    context['sport_logs'] = sport_logs
+    context['sleeping_logs'] = sleeping_logs
+    context['meetings_logs'] = meetings_logs
+    context['seizure_logs'] = seizure_logs
+    context['is_current_date'] = (date == timezone.now().date())
+    context['medication_logs'] = medication_logs
     return render(request, 'dashboard/dashboard.html', context)
 
+
+class MedicationLogAPIView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request):
+        # Fetch all medications for the logged-in user
+        date = request.GET.get('date', timezone.now().date().strftime('%Y-%m-%d'))  # Default to today
+        medications = Medication.objects.filter(user=request.user)
+        medication_logs = MedicationLog.objects.filter(user=request.user, date=date)
+
+        context = {
+            'medications': medications,
+            'medication_logs': medication_logs,  # Include medication logs for the specified date
+            'today': timezone.now().date(),
+            'selected_date': date,
+        }
+        return render(request, 'dashboard/log_medication.html', context)
+
+    def post(self, request):
+        date = request.data.get('date', timezone.now().date().strftime('%Y-%m-%d'))  # Default to today
+        
+        # Create a mutable copy of the request data
+        data = request.data.copy()
+        data['user'] = request.user.id  # Set the user field to the logged-in user's ID
+
+        serializer = MedicationLogSerializer(data=data)
+        if serializer.is_valid():
+            # Assuming you also have a dose_index in the request data
+            MedicationLog.objects.update_or_create(
+                user=request.user,
+                date=date,
+                dose_index=serializer.validated_data['dose_index'],
+                defaults={
+                    'time_taken': serializer.validated_data['time_taken'],
+                    'medication': serializer.validated_data['medication']
+                }
+            )
+            return HttpResponseRedirect(reverse('dashboard:dashboard_home') + f'?date={date}')
+
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+# views.py
+from django.http import JsonResponse
+
+def keep_alive(request):
+    # Simply return a success response to reset the session timer
+    return JsonResponse({'status': 'success'})
 
 
 class FoodLogAPIView(APIView):
     def get(self, request, date):
+        print(request.data)  # Debug: Check what data is coming in
         food_logs = FoodLog.objects.filter(user=request.user, date=date)
         serializer = FoodLogSerializer(food_logs, many=True)
         if food_logs.exists():
@@ -114,9 +156,6 @@ class FoodLogAPIView(APIView):
 
         food_log.delete()
         return Response({'message': 'Food log deleted successfully'})
-
-
-
 
 
 class SportLogAPIView(APIView):
@@ -165,9 +204,9 @@ class SportLogAPIView(APIView):
         return Response({'message': 'Sport log deleted successfully'})
 
 
-
-
 class SleepingLogAPIView(APIView):
+    permission_classes = [IsAuthenticated]
+
     def get(self, request, date):
         sleeping_logs = SleepingLog.objects.filter(user=request.user, date=date)
         serializer = SleepingLogSerializer(sleeping_logs, many=True)
@@ -176,14 +215,12 @@ class SleepingLogAPIView(APIView):
         else:
             return Response({'message': 'No sleeping log for this date'}, status=status.HTTP_404_NOT_FOUND)
 
-    permission_classes = [IsAuthenticated]
-
     def post(self, request, date=None):
-        # Use request.POST to handle form data
-        date = request.POST.get('date')
-        serializer = SleepingLogSerializer(data=request.POST)
+        # Use request.data to handle JSON data
+        date = request.data.get('date')  # Retrieve date from request data
+        serializer = SleepingLogSerializer(data=request.data)
         if serializer.is_valid():
-            # Save or update the SportLog instance
+            # Save or update the SleepingLog instance
             SleepingLog.objects.update_or_create(
                 user=request.user,
                 date=date,
@@ -211,6 +248,7 @@ class SleepingLogAPIView(APIView):
 
         sleeping_log.delete()
         return Response({'message': 'Sleeping log deleted successfully'})
+
 
 
 class MeetingsAPIView(APIView):
@@ -314,3 +352,73 @@ class DailyDocumentationView(View):
         }
 
         return render(request, 'dashboard/dashboard.html', context)
+    
+
+@login_required
+def log_medication(request, date):
+    if request.method == 'POST':
+        try:
+            # Retrieve the time_taken from the form
+            time_taken_str = request.POST.get('time_taken')
+            medication_id = request.POST.get('medication')
+
+            # Check if time_taken and medication_id exist in the form data
+            if not time_taken_str or not medication_id:
+                raise ValueError("Time and Medication selection are required.")
+
+            # Convert time_taken from string to a time object
+            time_taken = timezone.datetime.strptime(time_taken_str, "%H:%M").time()
+
+            # Get the medication object
+            medication = get_object_or_404(Medication, id=medication_id, user=request.user)
+
+            # Retrieve logs for this medication and date
+            existing_logs = MedicationLog.objects.filter(
+                user=request.user,
+                medication=medication,
+                date=date
+            )
+            print(f"Existing logs count: {existing_logs.count()}")
+
+            # Calculate the max dose index, explicitly checking for None
+            max_dose_index = existing_logs.aggregate(max_index=models.Max('dose_index'))['max_index']
+            if max_dose_index is None:
+                max_dose_index = -1
+            print(f"Max dose index before saving: {max_dose_index}")
+
+            next_dose_index = max_dose_index + 1
+            print(f"Next dose index to be used: {next_dose_index}")
+
+            # Log the new medication entry
+            MedicationLog.objects.create(
+                user=request.user,
+                medication=medication,
+                date=date,
+                time_taken=time_taken,
+                dose_index=next_dose_index
+            )
+            print(f"Logging medication at time {time_taken} with dose_index {next_dose_index}")
+
+            # Pass a success message to indicate that the entry was saved
+            success_message = "Medication entry saved successfully!"
+
+        except Exception as e:
+            # Handle any errors and provide feedback
+            print(f"An error occurred: {e}")
+            return render(request, 'dashboard/dashboard.html', {
+                'error_message': f"An error occurred: {e}",
+                'date': date
+            })
+
+    # Retrieve all logs for the current date to show on the dashboard
+    logs_for_date = MedicationLog.objects.filter(user=request.user, date=date)
+    
+    # Render the same page with the current date data and success message if available
+    return render(request, 'dashboard/dashboard.html', {
+        'date': date,
+        'logs': logs_for_date,
+        'success_message': success_message if 'success_message' in locals() else None
+    })
+
+
+

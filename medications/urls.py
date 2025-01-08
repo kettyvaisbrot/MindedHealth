@@ -1,19 +1,18 @@
 # medications/urls.py
 from django.urls import path
-from .views import MedicationListView, MedicationListCreateView, MedicationDeleteView,UpdateMedicationView, AddMedicationLogView
+from .views import medication_list, add_medication, edit_medication, delete_medication, log_medication,keep_alive
+from django.contrib.auth import views as auth_views
 
-app_name = 'medications'  
-
+app_name = 'medications'
 
 urlpatterns = [
-    path('list/', MedicationListView.as_view(), name='list'),  
-    path('', MedicationListView.as_view(), name='medication_list'),
-    path('api/medications/', MedicationListCreateView.as_view(), name='medication_list_create'),
-    path('api/medications/<int:pk>/', MedicationDeleteView.as_view(), name='medication_delete'),
-    path('update/', UpdateMedicationView.as_view(), name='update'),
-    path('update/<int:pk>/', UpdateMedicationView.as_view(), name='update'),
-    path('add-medication-log/', AddMedicationLogView.as_view(), name='add_medication_log'),
-
+    path('', medication_list, name='medication_list'),
+    path('add/', add_medication, name='add_medication'),
+    path('edit/<int:pk>/', edit_medication, name='edit_medication'),
+    path('delete/<int:pk>/', delete_medication, name='delete_medication'),
+    path('log/', log_medication, name='log_medication'),
+    path('logout/', auth_views.LogoutView.as_view(), name='logout'),
+    path('keep-alive/', keep_alive, name='keep_alive'),
 
 
 ]

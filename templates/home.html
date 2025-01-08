@@ -65,14 +65,20 @@
         <h2>Home</h2>
         {% if user.is_authenticated %}
             <p>Welcome, {{ user.username }}!</p>
-            <p><a href="{% url 'logout' %}"><button>Logout</button></a></p>
+            <form method="POST" action="{% url 'logout' %}">
+                {% csrf_token %}
+                <button type="submit">Logout</button>
+            </form>
             <p><a href="{% url 'dashboard:dashboard_home' %}"><button>Dashboard</button></a></p>
-            <p><a href="{% url 'medications:list' %}"><button>Medications</button></a></p>
             <p><a href="{% url 'my_statistics:statistics_view' %}"><button>Statistics</button></a></p>
+            <p><a href="{% url 'medications:medication_list' %}"><button>Manage Medications</button></a></p>
+            
+            <!-- Chat Button -->
+            <p><a href="{% url 'chat_room' room_name='general' %}"><button>Join Chat</button></a></p>
             
             <!-- Button to toggle search form -->
             <button onclick="toggleSearchForm()">What interests you?</button>
-
+            
             <!-- Search Form -->
             <div id="search-form" style="display:none;" class="search-container">
                 <form action="{% url 'what_interested_you:search' %}" method="get">
@@ -80,6 +86,17 @@
                     <button type="submit">Search</button>
                 </form>
             </div>
+            
+            <script>
+                function toggleSearchForm() {
+                    var searchForm = document.getElementById('search-form');
+                    if (searchForm.style.display === 'none' || searchForm.style.display === '') {
+                        searchForm.style.display = 'block';  // Show the form
+                    } else {
+                        searchForm.style.display = 'none';  // Hide the form
+                    }
+                }
+            </script>
 
         {% else %}
             <p>Welcome, guest!</p>
@@ -87,12 +104,95 @@
             <p><a href="{% url 'register' %}"><button>Register</button></a></p>
         {% endif %}
     </div>
+    <!-- Warning Modal -->
+    <div id="logoutWarning" style="display: none; position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); padding: 20px; border: 1px solid #ccc; background: #fff; z-index: 1000; text-align: center;">
+        <p>You will be logged out in 30 seconds due to inactivity.</p>
+        <button onclick="stayOnSite()">Stay Logged In</button>
+        <button onclick="logOut()">Log Out</button>
+    </div>
 
     <script>
-        function toggleSearchForm() {
-            var searchForm = document.getElementById('search-form');
-            searchForm.style.display = searchForm.style.display === 'none' ? 'block' : 'none';
+        // Use the `is_authenticated` variable to conditionally start timers
+        const isAuthenticated = {{ is_authenticated|yesno:"true,false" }};
+
+        let warningTimer, logoutTimer;
+        const timeoutDuration = 120000; // 2 minutes
+        const logoutUrl = "/logout/";
+
+        if (isAuthenticated) {
+            // Function to show the warning modal
+            function showWarning() {
+                document.getElementById("logoutWarning").style.display = "block";
+            }
+
+            // Function to stay logged in
+            function stayOnSite() {
+                document.getElementById("logoutWarning").style.display = "none";
+                // Reset session or activity timers
+                fetch('/keep-alive/', { method: 'GET' })
+                    .then(response => console.log('Session extended'))
+                    .catch(error => console.error('Error extending session:', error));
+                // Restart the warning timer
+                startWarningTimer();
+            }
+
+            // Function to log out the user
+            function logOut() {
+                window.location.href = logoutUrl;
+            }
+
+            // Function to start the warning timer
+            function startWarningTimer() {
+                warningTimer = setTimeout(showWarning, 90000); // Show warning 30 seconds before logout
+            }
+
+            // Function to log out the user automatically
+            function logoutUser() {
+                fetch(logoutUrl, {
+                    method: 'POST', // Ensure this is a POST request
+                    headers: {
+                        'X-CSRFToken': getCookie('csrftoken'), // Add CSRF token
+                    }
+                })
+                .then(response => {
+                    if (response.redirected) {
+                        window.location.href = response.url; // Redirect after logout
+                    }
+                })
+                .catch(error => console.error('Logout error:', error));
+            }
+
+            // Function to get CSRF token from cookies
+            function getCookie(name) {
+                let cookieValue = null;
+                if (document.cookie && document.cookie !== '') {
+                    const cookies = document.cookie.split(';');
+                    for (let i = 0; i < cookies.length; i++) {
+                        const cookie = cookies[i].trim();
+                        if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                            cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                            break;
+                        }
+                    }
+                }
+                return cookieValue;
+            }
+
+            // Reset the logout timer on user activity
+            function resetTimeout() {
+                clearTimeout(logoutTimer);
+                logoutTimer = setTimeout(logoutUser, timeoutDuration);
+            }
+
+            // Start the timers only for authenticated users
+            startWarningTimer();
+            logoutTimer = setTimeout(logoutUser, timeoutDuration);
+
+            // Listen for activity to reset the timers
+            document.addEventListener('mousemove', resetTimeout);
+            document.addEventListener('keypress', resetTimeout);
         }
     </script>
+    
 </body>
 </html>

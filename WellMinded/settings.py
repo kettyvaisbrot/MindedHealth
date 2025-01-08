@@ -15,18 +15,17 @@ from pathlib import Path
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
 
-ALLOWED_HOSTS = ['13.60.47.245', 'localhost', '127.0.0.1']
-
 
 # Quick-start development settings - unsuitable for production
 # See https://docs.djangoproject.com/en/5.0/howto/deployment/checklist/
 
 # SECURITY WARNING: keep the secret key used in production secret!
 SECRET_KEY = 'django-insecure-rg_e=t-n)x)l^9zid9bx-wqc40c5z6qiyji%!ar8)&)=m8h-q0'
-ALLOWED_HOSTS = os.getenv('ALLOWED_HOSTS', '18.234.204.189,localhost,127.0.0.1').split(',')
+ALLOWED_HOSTS = ['*']
+
 
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = False
+DEBUG = True
 
 import os
 from dotenv import load_dotenv
@@ -43,14 +42,24 @@ load_dotenv()
 # Access environment variables
 GOOGLE_SEARCH_API_KEY = os.getenv('GOOGLE_SEARCH_API_KEY')
 GOOGLE_SEARCH_CSE_ID = os.getenv('GOOGLE_SEARCH_CSE_ID')
+ASGI_APPLICATION = 'WellMinded.asgi.application'
 
 
-ALLOWED_HOSTS = []
+CHANNEL_LAYERS = {
+    'default': {
+        'BACKEND': 'channels_redis.core.RedisChannelLayer',
+        'CONFIG': {
+            "hosts": [('127.0.0.1', 6379)],
+        },
+    },
+}
+
 
 
 # Application definition
 
 INSTALLED_APPS = [
+    'channels',
     'rest_framework',
     'dashboard',
     'medications',
@@ -65,20 +74,25 @@ INSTALLED_APPS = [
     'django.contrib.staticfiles',
 ]
 
+
+# settings.py
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
-    'django.contrib.sessions.middleware.SessionMiddleware',
+    'django.contrib.sessions.middleware.SessionMiddleware',  # Ensure this is before your custom middleware
+    'WellMinded.middleware.LogoutOnServerStartMiddleware',  # Your custom middleware to log out on server start
     'django.middleware.common.CommonMiddleware',
     'django.middleware.csrf.CsrfViewMiddleware',
-    'django.contrib.auth.middleware.AuthenticationMiddleware',
+    'django.contrib.auth.middleware.AuthenticationMiddleware',  # Should come after session middleware
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
 ]
-
+LOGOUT_REDIRECT_URL = '/'  # Redirect to home page after logout
 ROOT_URLCONF = 'WellMinded.urls'
 import os
 from pathlib import Path
-
+# Set session timeout to 2 minutes
+SESSION_COOKIE_AGE = 120  # Time in seconds (2 minutes)
+SESSION_EXPIRE_AT_BROWSER_CLOSE = True  # Optional: Logout when the browser is closed
 BASE_DIR = Path(__file__).resolve().parent.parent
 
 TEMPLATES = [

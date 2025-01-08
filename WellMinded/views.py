@@ -4,7 +4,15 @@ from django.contrib.auth.forms import UserCreationForm, AuthenticationForm
 from django.contrib.auth.decorators import login_required
 
 def home(request):
-    return render(request, 'home.html')
+    return render(request, 'home.html', {'is_authenticated': request.user.is_authenticated})
+
+from django.shortcuts import render
+
+def room(request, room_name):
+    return render(request, 'chat/room.html', {
+        'room_name': room_name
+    })
+
 
 def register(request):
     if request.method == 'POST':
@@ -28,7 +36,15 @@ def login_view(request):
         form = AuthenticationForm()
     return render(request, 'login.html', {'form': form})
 
-@login_required
-def logout_view(request):
+
+
+def custom_logout_view(request):
     logout(request)
     return redirect('home')
+
+# views.py
+from django.http import JsonResponse
+
+def keep_alive(request):
+    # Simply return a success response to reset the session timer
+    return JsonResponse({'status': 'success'})

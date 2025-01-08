@@ -1,0 +1,111 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Chat Room</title>
+    <style>
+        .user-list {
+            display: none;
+            position: absolute;
+            border: 1px solid #ccc;
+            background-color: white;
+            width: 150px;
+            max-height: 200px;
+            overflow-y: auto;
+        }
+        .user-list div {
+            padding: 8px;
+            cursor: pointer;
+        }
+        .user-list div:hover {
+            background-color: #f0f0f0;
+        }
+    </style>
+</head>
+<body>
+    <h1>Chat Room</h1>
+    <p>
+        <a href="{% url 'home' %}"><button>Back to Home</button></a>
+    </p>
+    <div id="pseudonym-section">
+        <label for="pseudonym">Enter your pseudonym:</label>
+        <input type="text" id="pseudonym" placeholder="Your Name" required style="width: 100%; padding: 10px;">
+        <button id="join-chat" style="padding: 10px;">Join Chat</button>
+    </div>
+    
+    <textarea id="chat-log" readonly style="width: 100%; height: 300px; margin-top: 10px;" hidden></textarea>
+    <input type="text" id="chat-message-input" placeholder="Type a message..." style="width: 100%; padding: 10px;" hidden>
+
+    <div id="user-list" class="user-list"></div>
+
+    <script>
+        let userList = [];
+
+        document.addEventListener('DOMContentLoaded', function () {
+            const chatSocket = new WebSocket('ws://' + window.location.host + '/ws/chat/general/');
+
+            chatSocket.onmessage = function(e) {
+                const data = JSON.parse(e.data);
+
+                if (data.users) {
+                    userList = data.users;
+                    console.log('User list:', userList);
+                } else {
+                    document.querySelector('#chat-log').value += `[${data.time}] ${data.user}: ${data.message}\n`;
+                }
+            };
+
+            document.querySelector('#join-chat').addEventListener('click', function () {
+                const pseudonym = document.querySelector('#pseudonym').value.trim();
+                if (!pseudonym) {
+                    alert('Please enter a pseudonym.');
+                    return;
+                }
+
+                document.querySelector('#pseudonym-section').style.display = 'none';
+                document.querySelector('#chat-log').hidden = false;
+                document.querySelector('#chat-message-input').hidden = false;
+
+                chatSocket.send(JSON.stringify({
+                    'user': pseudonym
+                }));
+            });
+
+            document.querySelector('#chat-message-input').addEventListener('keyup', function(e) {
+                const messageInput = e.target;
+                const message = messageInput.value;
+
+                if (e.key === '@') {
+                    showUserList();
+                }
+
+                if (e.key === 'Enter') {
+                    chatSocket.send(JSON.stringify({
+                        'message': message,
+                        'user': document.querySelector('#pseudonym').value
+                    }));
+
+                    messageInput.value = '';
+                }
+            });
+
+            function showUserList() {
+                const userListDiv = document.querySelector('#user-list');
+                userListDiv.innerHTML = '';
+                userList.forEach(user => {
+                    const div = document.createElement('div');
+                    div.textContent = user;
+                    div.onclick = function() {
+                        const messageInput = document.querySelector('#chat-message-input');
+                        messageInput.value += '@' + user + ' ';
+                        userListDiv.style.display = 'none';
+                    };
+                    userListDiv.appendChild(div);
+                });
+                userListDiv.style.display = 'block';
+            }
+        });
+    </script>
+</body>
+</html>

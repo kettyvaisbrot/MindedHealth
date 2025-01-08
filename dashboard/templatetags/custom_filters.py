@@ -1,8 +1,7 @@
-# dashboard/templatetags/custom_filters.py
 from django import template
 
 register = template.Library()
 
-@register.filter(name='times')
-def times(number):
-    return range(number)
+@register.filter
+def range_filter(value):
+    return range(value)

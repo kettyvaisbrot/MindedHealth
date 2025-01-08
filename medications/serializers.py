@@ -7,7 +7,8 @@ class MedicationSerializer(serializers.ModelSerializer):
         fields = ['id', 'name', 'times_per_day', 'dose', 'user']
         read_only_fields = ['user'] 
 
+
 class MedicationLogSerializer(serializers.ModelSerializer):
     class Meta:
         model = MedicationLog
-        fields = ['id', 'medication', 'date', 'time_taken','user']
+        fields = ['user', 'date', 'dose_index', 'time_taken', 'medication']
