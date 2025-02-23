@@ -4,11 +4,12 @@ FROM python:3.9-slim
 # Set the working directory inside the container
 WORKDIR /app
 
-# Install system dependencies required for mysqlclient
+# Install system dependencies required for mysqlclient (use mariadb-dev instead of mysqlclient)
 RUN apt-get update && apt-get install -y \
     pkg-config \
-    libmysqlclient-dev \
+    libmariadb-dev \
     && rm -rf /var/lib/apt/lists/*
+
 
 # Copy the requirements file into the container
 COPY requirements.txt .
