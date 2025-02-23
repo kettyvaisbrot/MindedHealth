@@ -1,28 +1,26 @@
-# Use a Python base image
+# Use the official Python image as a base
 FROM python:3.9-slim
-
-# Set environment variables to avoid Python buffering
-ENV PYTHONUNBUFFERED 1
 
 # Set the working directory inside the container
 WORKDIR /app
 
-# Install dependencies for your application (you can adjust as needed)
+# Install system dependencies required for mysqlclient
 RUN apt-get update && apt-get install -y \
-    libpq-dev \
+    pkg-config \
+    libmysqlclient-dev \
     && rm -rf /var/lib/apt/lists/*
 
 # Copy the requirements file into the container
-COPY requirements.txt /app/
+COPY requirements.txt .
 
 # Install Python dependencies
 RUN pip install --upgrade pip && pip install -r requirements.txt
 
 # Copy the rest of your application into the container
-COPY . /app/
+COPY . .
 
-# Expose port 8000 for the Django app
+# Expose the port your app will run on
 EXPOSE 8000
 
-# Run the application using Gunicorn (change "mindedhealth" to your project folder name)
-CMD ["gunicorn", "mindedhealth.wsgi:application", "--bind", "0.0.0.0:8000"]
+# Command to run the application
+CMD ["python", "manage.py", "runserver", "0.0.0.0:8000"]
