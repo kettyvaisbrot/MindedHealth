@@ -1,0 +1,62 @@
+name: CI/CD Pipeline
+
+# This defines when the workflow should run
+on:
+  push:
+    branches:
+      - main  # Trigger the pipeline on push to the main branch
+  pull_request:
+    branches:
+      - main  # Trigger the pipeline on PR to the main branch
+
+jobs:
+  build:
+    runs-on: ubuntu-latest  # Use the latest Ubuntu for the build environment
+
+    steps:
+      # Step 1: Checkout code
+      - name: Checkout code
+        uses: actions/checkout@v2  # Checkout the repository code
+
+      # Step 2: Set up Python
+      - name: Set up Python
+        uses: actions/setup-python@v2
+        with:
+          python-version: 3.8  # Specify the Python version for your app
+
+      # Step 3: Install dependencies
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip  # Upgrade pip
+          pip install -r requirements.txt  # Install your project's dependencies
+
+      # Step 4: Run tests
+      - name: Run Tests
+        run: |
+          python manage.py test  # Run Django's test command to check if everything works
+          
+  deploy:
+    runs-on: ubuntu-latest  # Deploy job will also run on Ubuntu
+    needs: build  # Ensure that deploy only runs after build and tests are successful
+    environment: production  # Deployment environment is 'production'
+
+    steps:
+      # Step 1: Checkout code again for deployment
+      - name: Checkout code
+        uses: actions/checkout@v2
+
+      # Step 2: Set up AWS CLI with your AWS credentials (configured in GitHub Secrets)
+      - name: Set up AWS CLI
+        run: |
+          aws configure set aws_access_key_id ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws configure set aws_secret_access_key ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws configure set region ${{ secrets.AWS_REGION }}
+
+      # Step 3: Deploy to Kubernetes (EKS)
+      - name: Deploy to EKS
+        run: |
+          # Update kubeconfig to interact with your AWS EKS cluster
+          aws eks --region ${{ secrets.AWS_REGION }} update-kubeconfig --name <your-cluster-name>
+          
+          # Deploy the app using Kubernetes
+          kubectl apply -f kubernetes/deployment.yml  # Apply your Kubernetes deployment YAML file
