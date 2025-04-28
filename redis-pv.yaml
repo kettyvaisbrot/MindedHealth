@@ -1,0 +1,29 @@
+apiVersion: v1
+kind: PersistentVolume
+metadata:
+  name: redis-data-redis-master-0
+  namespace: redis
+spec:
+  capacity:
+    storage: 2Gi
+  accessModes:
+    - ReadWriteOnce
+  persistentVolumeReclaimPolicy: Retain
+  storageClassName: standard  # Ensure this is the same as the PVC's storageClassName
+  hostPath:
+    path: /mnt/data/redis-master  # If you're using hostPath, change this as needed.
+---
+apiVersion: v1
+kind: PersistentVolume
+metadata:
+  name: redis-data-redis-replicas-0
+  namespace: redis
+spec:
+  capacity:
+    storage: 2Gi
+  accessModes:
+    - ReadWriteOnce
+  persistentVolumeReclaimPolicy: Retain
+  storageClassName: standard  # Ensure this is the same as the PVC's storageClassName
+  hostPath:
+    path: /mnt/data/redis-replicas  # Adjust path as needed

@@ -1,0 +1,38 @@
+<!-- chatbot/templates/chatbot/chat.html -->
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI Chatbot</title>
+</head>
+<body>
+    <h1>Chat with AI!</h1>
+    <div id="chat-log"></div>
+    <input type="text" id="user-input" placeholder="Type your message...">
+    <button onclick="sendMessage()">Send</button>
+
+    <script>
+        function sendMessage() {
+            const userInput = document.getElementById("user-input").value;
+            document.getElementById("user-input").value = '';  // Clear input field
+
+            const chatLog = document.getElementById("chat-log");
+            chatLog.innerHTML += `<div>User: ${userInput}</div>`;
+
+            fetch('/chatbot/api/chat/', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({ user_input: userInput }),
+            })
+            .then(response => response.json())
+            .then(data => {
+                chatLog.innerHTML += `<div>Bot: ${data.response}</div>`;
+            })
+            .catch(error => console.error('Error:', error));
+        }
+    </script>
+</body>
+</html>
