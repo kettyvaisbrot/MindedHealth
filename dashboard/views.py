@@ -1,3 +1,5 @@
+from drf_yasg.utils import swagger_auto_schema
+from drf_yasg import openapi
 from django.shortcuts import render,get_object_or_404
 from django.http import JsonResponse, HttpResponseRedirect
 from django.views import View
@@ -114,6 +116,10 @@ def keep_alive(request):
 
 
 class FoodLogAPIView(APIView):
+    @swagger_auto_schema(
+        operation_description="Retrieve food logs for a specific date.",
+        responses={200: FoodLogSerializer(many=True), 404: "No food log for this date"}
+    )
     def get(self, request, date):
         print(request.data)  # Debug: Check what data is coming in
         food_logs = FoodLog.objects.filter(user=request.user, date=date)
@@ -125,7 +131,11 @@ class FoodLogAPIView(APIView):
 
 
     permission_classes = [IsAuthenticated]
-
+    @swagger_auto_schema(
+        operation_description="Create or update a food log for a specific date.",
+        request_body=FoodLogSerializer,
+        responses={302: "Redirects to dashboard after successful save", 400: "Validation errors"}
+    )
     def post(self, request):
         date = request.data.get('date')
         serializer = FoodLogSerializer(data=request.data)
@@ -137,7 +147,12 @@ class FoodLogAPIView(APIView):
             )
             return HttpResponseRedirect(reverse('dashboard:dashboard_home') + f'?date={date}')
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
-
+    
+    @swagger_auto_schema(
+        operation_description="Update an existing food log for a specific date.",
+        request_body=FoodLogSerializer,
+        responses={200: FoodLogSerializer, 404: "Food log not found for this date", 400: "Validation errors"}
+    )
     def put(self, request, date):
         food_log = FoodLog.objects.filter(user=request.user, date=date).first()
         if not food_log:
@@ -148,7 +163,11 @@ class FoodLogAPIView(APIView):
             serializer.save()
             return Response(serializer.data)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
-
+    
+    @swagger_auto_schema(
+        operation_description="Delete a food log for a specific date.",
+        responses={200: "Food log deleted successfully", 404: "Food log not found for this date"}
+    )
     def delete(self, request, date):
         food_log = FoodLog.objects.filter(user=request.user, date=date).first()
         if not food_log:

@@ -43,6 +43,7 @@ load_dotenv()
 GOOGLE_SEARCH_API_KEY = os.getenv('GOOGLE_SEARCH_API_KEY')
 GOOGLE_SEARCH_CSE_ID = os.getenv('GOOGLE_SEARCH_CSE_ID')
 ASGI_APPLICATION = 'MindedHealth.asgi.application'
+OPENAI_API_KEY = os.getenv('OPENAI_API_KEY')
 
 
 CHANNEL_LAYERS = {
@@ -54,11 +55,24 @@ CHANNEL_LAYERS = {
     },
 }
 
+CACHES = {
+    'default': {
+        'BACKEND': 'django_redis.cache.RedisCache',
+        'LOCATION': 'redis://localhost:6379/1',  # Adjust this if needed
+        'OPTIONS': {
+            'CLIENT_CLASS': 'django_redis.client.DefaultClient',
+        }
+    }
+}
+
+
 
 
 # Application definition
 
 INSTALLED_APPS = [
+    'drf_yasg',
+    'chatbot',
     'channels',
     'rest_framework',
     'dashboard',
@@ -94,6 +108,8 @@ from pathlib import Path
 SESSION_COOKIE_AGE = 120  # Time in seconds (2 minutes)
 SESSION_EXPIRE_AT_BROWSER_CLOSE = True  # Optional: Logout when the browser is closed
 BASE_DIR = Path(__file__).resolve().parent.parent
+SESSION_ENGINE = 'django.contrib.sessions.backends.cache'
+SESSION_CACHE_ALIAS = 'default'
 
 TEMPLATES = [
     {
