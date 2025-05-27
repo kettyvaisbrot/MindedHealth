@@ -25,9 +25,13 @@ class MeetingsSerializer(serializers.ModelSerializer):
         model = Meetings
         fields = '__all__'
 
+from .models import SeizureLog
+
 class SeizureLogSerializer(serializers.ModelSerializer):
+    user = serializers.HiddenField(default=serializers.CurrentUserDefault())
+
     class Meta:
         model = SeizureLog
-        fields = '__all__'
+        fields = ['user', 'date', 'time', 'duration_minutes']
 
 
