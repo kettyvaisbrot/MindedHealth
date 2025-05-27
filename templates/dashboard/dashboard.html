@@ -186,7 +186,7 @@
                 <h2>Meeting Log for {{ date }}</h2>
                 <ul>
                     {% for log in meetings_logs %}
-                        {% if log.date|date:"Y-m-d" == date %}
+                        {% if log.date|date:"Y-m-d" == date|date:"Y-m-d" %}
                             <li>
                                 {{ log.date }} - 
                                 Time: {{ log.time|time:"H:i" }}, 
@@ -312,7 +312,21 @@
             </select>
             <br>
             <button type="submit">Save</button>
-        </form>  
+        </form>
+        <h2>Document a Seizure</h2>
+        <form method="post" action="{% url 'dashboard:seizure_logs_api' %}">
+            {% csrf_token %}
+            <input type="hidden" name="date" value="{{ date|date:'Y-m-d' }}">
+        
+            <label for="time">Time:</label>
+            <input type="time" id="time" name="time">
+        
+            <label for="duration_minutes">Duration (minutes):</label>
+            <input type="number" id="duration_minutes" name="duration_minutes" min="1" required>
+        
+            <button type="submit">Save Seizure Log</button>
+        </form>
+        
         <h2>Medication Documentation</h2>
         <form method="post" action="{% url 'dashboard:log_medication' date=date|date:'Y-m-d' %}">
             {% csrf_token %}
