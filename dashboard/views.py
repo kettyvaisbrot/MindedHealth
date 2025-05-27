@@ -52,7 +52,6 @@ def dashboard_home(request):
     meetings_logs = Meetings.objects.filter(user=request.user, date=date)
     seizure_logs = SeizureLog.objects.filter(user=request.user, date=date)
     medication_logs = MedicationLog.objects.filter(user=request.user, date=date).select_related('medication')
-
  
     # Populate context with data
     context['date'] = date
@@ -64,6 +63,8 @@ def dashboard_home(request):
     context['seizure_logs'] = seizure_logs
     context['is_current_date'] = (date == timezone.now().date())
     context['medication_logs'] = medication_logs
+    context['sport_choices'] = SportLog.SPORT_CHOICES
+    context['meeting_type_choices'] = Meetings.MEETING_TYPES_CHOICES
     return render(request, 'dashboard/dashboard.html', context)
 
 
