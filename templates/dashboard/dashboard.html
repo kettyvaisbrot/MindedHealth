@@ -173,7 +173,7 @@
                         <li>
                             {{ log.date }} - 
                             Wake Time: {{ log.wake_up_time|time:"H:i" }}, 
-                            Sleep Time: {{ log.sleep_time|time:"H:i" }}, 
+                            went_to_sleep_yesterday: {{ log.went_to_sleep_yesterday |time:"H:i" }}, 
                             Woke Up During Night: {% if log.woke_up_during_night %}Yes{% else %}No{% endif %}
                         </li>
                     {% endfor %}
@@ -207,7 +207,7 @@
                 <h2>Seizure Log for {{ date }}</h2>
                 <ul>
                     {% for log in seizure_logs %}
-                        {% if log.date|date:"Y-m-d" == date %}
+                        {% if log.date|date:"Y-m-d" == date|date:"Y-m-d" %}
                             <li>
                                 {{ log.date }} - 
                                 Time: {{ log.time|time:"H:i" }}, 
@@ -279,17 +279,25 @@
             {% csrf_token %}
             <input type="hidden" name="date" value="{{ date|date:'Y-m-d' }}">
             <input type="hidden" name="user" value="{{ request.user.id }}">
+
             <label for="wake_up_time">Wake Time:</label>
-            <input type="time" id="wake_up_time" name="wake_up_time" value="{% if sleeping_logs %}{{ sleeping_logs.0.wake_up_time|time:'H:i' }}{% endif %}">
+            <input type="time" id="wake_up_time" name="wake_up_time" 
+                value="{% if sleeping_logs %}{{ sleeping_logs.0.wake_up_time|time:'H:i' }}{% endif %}">
             <br>
-            <label for="sleep_time">Sleep Time:</label>
-            <input type="time" id="sleep_time" name="sleep_time" value="{% if sleeping_logs %}{{ sleeping_logs.0.sleep_time|time:'H:i' }}{% endif %}">
+
+            <label for="went_to_sleep_yesterday">went_to_sleep_yesterday:</label>
+            <input type="time" id="went_to_sleep_yesterday" name="went_to_sleep_yesterday" 
+                value="{% if sleeping_logs %}{{ sleeping_logs.0.went_to_sleep_yesterday|time:'H:i' }}{% endif %}">
             <br>
+
             <label for="woke_up_during_night">Woke Up During Night:</label>
-            <input type="checkbox" id="woke_up_during_night" name="woke_up_during_night" {% if sleeping_logs and sleeping_logs.0.woke_up_during_night %}checked{% endif %}>
+            <input type="checkbox" id="woke_up_during_night" name="woke_up_during_night" 
+                {% if sleeping_logs and sleeping_logs.0.woke_up_during_night %}checked{% endif %}>
             <br>
+
             <button type="submit">Save</button>
-        </form>        
+        </form>
+     
         <form method="POST" action="{% url 'dashboard:meetings_log_api' %}">
             {% csrf_token %}
             <input type="hidden" name="date" value="{{ date|date:'Y-m-d' }}">
