@@ -1,0 +1,73 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>AI Insights</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background: #f5f7fa;
+            color: #333;
+            padding: 20px;
+            max-width: 800px;
+            margin: 40px auto;
+            border-radius: 8px;
+            background-color: #ffffff;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+        }
+        h1 {
+            color: #2c3e50;
+            text-align: center;
+        }
+        .insight-box {
+            background-color: #e8f0fe;
+            border-left: 6px solid #1e88e5;
+            padding: 20px;
+            margin-top: 30px;
+            border-radius: 5px;
+            font-size: 18px;
+            line-height: 1.6;
+        }
+        .back-button {
+            display: block;
+            width: fit-content;
+            margin: 30px auto 0;
+            padding: 10px 20px;
+            background-color: #1e88e5;
+            color: white;
+            text-decoration: none;
+            border: none;
+            border-radius: 5px;
+            font-size: 16px;
+            cursor: pointer;
+        }
+        .back-button:hover {
+            background-color: #1669bb;
+        }
+        .footer {
+            text-align: center;
+            font-size: 14px;
+            color: #888;
+            margin-top: 40px;
+        }
+    </style>
+</head>
+<body>
+
+    <h1>Your AI Insight</h1>
+
+    <div class="insight-box">
+        {{ insights|linebreaks }}
+    </div>
+
+    <!-- Back to Home button -->
+    <a href="{% url 'home' %}">
+        <button class="back-button">Back to Home</button>
+    </a>
+
+    <div class="footer">
+        Powered by MindedHealth AI Assistant
+    </div>
+
+</body>
+</html>
