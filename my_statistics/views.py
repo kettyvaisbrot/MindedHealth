@@ -53,22 +53,23 @@ def statistics_view(request):
     for day in range(1, days_in_month + 1):
         current_date = datetime(selected_year, selected_month, day).date()
 
-        # Fetch the sleep log for the current date
-        sleep_log_today = SleepingLog.objects.filter(date=current_date).first()
-        sleep_log_tomorrow = SleepingLog.objects.filter(date=current_date + timedelta(days=1)).first()
+        # Fetch the sleep log for the current date only
+        sleep_log = SleepingLog.objects.filter(date=current_date).first()
 
-        if sleep_log_today and sleep_log_tomorrow:
-            # Calculate sleep duration
-            sleep_time = datetime.combine(current_date, sleep_log_today.sleep_time)
-            wake_up_time = datetime.combine(current_date + timedelta(days=1), sleep_log_tomorrow.wake_up_time)
+        if sleep_log and sleep_log.went_to_sleep_yesterday and sleep_log.wake_up_time:
+            sleep_time = datetime.combine(current_date, sleep_log.went_to_sleep_yesterday)
+            wake_up_time = datetime.combine(current_date, sleep_log.wake_up_time)
+
+            # If wake_up_time is earlier or equal, add one day
+            if wake_up_time <= sleep_time:
+                wake_up_time += timedelta(days=1)
+
             duration = wake_up_time - sleep_time
-            
-            # Pre-calculate days, hours, and minutes
+
             days = duration.days
-            hours = duration.seconds // 3600  # Convert seconds to hours
-            minutes = (duration.seconds // 60) % 60  # Convert seconds to minutes
-            
-            # Store the calculated values in the dictionary
+            hours = duration.seconds // 3600
+            minutes = (duration.seconds // 60) % 60
+
             sleep_durations[current_date] = {
                 'days': days,
                 'hours': hours,
@@ -89,11 +90,10 @@ def statistics_view(request):
         'month_choices': month_choices,
         'seizure_stats_with_events': seizure_stats_with_events,
         'sleep_durations': sleep_durations,
-        'medication_statistics' : medication_statistics,
+        'medication_statistics': medication_statistics,
     }
 
     return render(request, 'my_statistics/statistics.html', context)
-
 
 def get_avg_meal_time(user, year, month, meal_type):
     """Helper function to calculate average meal time for a given user, year, month, and meal type."""
@@ -198,10 +198,10 @@ def calculate_avg_sleep_times(sleeping_logs):
     count = 0
 
     for log in sleeping_logs:
-        if log.wake_up_time and log.sleep_time:
+        if log.wake_up_time and log.went_to_sleep_yesterday:
             wake_seconds = log.wake_up_time.hour * 3600 + log.wake_up_time.minute * 60 + log.wake_up_time.second
-            sleep_seconds = log.sleep_time.hour * 3600 + log.sleep_time.minute * 60 + log.sleep_time.second
-            
+            sleep_seconds = log.went_to_sleep_yesterday.hour * 3600 + log.went_to_sleep_yesterday.minute * 60 + log.went_to_sleep_yesterday.second
+
             total_wake_seconds += wake_seconds
             total_sleep_seconds += sleep_seconds
             count += 1
@@ -209,14 +209,14 @@ def calculate_avg_sleep_times(sleeping_logs):
     if count > 0:
         avg_wake_seconds = total_wake_seconds / count
         avg_sleep_seconds = total_sleep_seconds / count
-        
-        # Format average times as "H:MM"
+
         avg_wake_time = f"{int(avg_wake_seconds // 3600)}:{int((avg_wake_seconds % 3600) // 60):02d}"
         avg_sleep_time = f"{int(avg_sleep_seconds // 3600)}:{int((avg_sleep_seconds % 3600) // 60):02d}"
-        
+
         return avg_wake_time, avg_sleep_time
     else:
-        return "00:00", "00:00"  # Handle case with no logs
+        return "00:00", "00:00"
+
 
 
 def get_meeting_statistics(user, year, month):
