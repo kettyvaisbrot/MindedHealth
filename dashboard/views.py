@@ -327,7 +327,7 @@ class SeizureLogAPIView(APIView):
 
     def post(self, request):
         date = request.data.get('date')
-        serializer = SeizureLogSerializer(data=request.data)
+        serializer = SeizureLogSerializer(data=request.data, context={'request': request})
         if serializer.is_valid():
             SeizureLog.objects.update_or_create(
                 user=request.user,
