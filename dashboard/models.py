@@ -54,13 +54,13 @@ def get_tomorrow_date():
 class SleepingLog(models.Model):
     user = models.ForeignKey(User, on_delete=models.CASCADE)
     date = models.DateField(auto_now_add=True)
-    sleep_time = models.TimeField(blank=True, null=True)  # Allows null values
+    went_to_sleep_yesterday  = models.TimeField(null=True, blank=True)  # NEW NAME
     wake_up_time = models.TimeField(blank=True, null=True) 
     woke_up_during_night = models.BooleanField(default=False)  # Add this line
 
 
     def __str__(self):
-        return f"{self.date} - Sleep Time: {self.sleep_time} - Wake Up Time: {self.wake_up_time}"
+        return f"{self.date} - Sleep Time: {self.went_to_sleep_yesterday } - Wake Up Time: {self.wake_up_time}"
 
 class Meetings(models.Model):
     MEETING_TYPES_CHOICES = [
