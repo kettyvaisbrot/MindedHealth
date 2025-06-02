@@ -12,11 +12,11 @@ class SportLogSerializer(serializers.ModelSerializer):
         fields = '__all__'
 
 class SleepingLogSerializer(serializers.ModelSerializer):
-    sleep_time = serializers.TimeField(required=False, allow_null=True, default=None)
+    went_to_sleep_yesterday  = serializers.TimeField(required=False, allow_null=True, default=None)
     wake_up_time = serializers.TimeField(required=False, allow_null=True, default=None)
     class Meta:
         model = SleepingLog  # Ensure you have your model referenced correctly.
-        fields = ['sleep_time', 'wake_up_time']  # Include other fields as necessary.
+        fields = ['went_to_sleep_yesterday', 'wake_up_time']  # Include other fields as necessary.
         
 
 
