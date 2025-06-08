@@ -9,7 +9,7 @@ spec:
   resources:
     requests:
       storage: 2Gi
-  storageClassName: standard   # Ensure this matches the PV's storageClassName
+  storageClassName: standard   
 ---
 apiVersion: v1
 kind: PersistentVolumeClaim
@@ -22,4 +22,4 @@ spec:
   resources:
     requests:
       storage: 2Gi
-  storageClassName: standard   # Ensure this matches the PV's storageClassName
+  storageClassName: standard   

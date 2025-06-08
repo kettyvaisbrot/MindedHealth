@@ -7,7 +7,7 @@ from .models import Medication, MedicationLog
 from .serializers import MedicationSerializer
 from rest_framework.response import Response
 from rest_framework import status
-
+from django.http import JsonResponse
 
 @login_required
 def medication_list(request):
@@ -32,7 +32,7 @@ def add_medication(request):
             user=request.user,
             dose_times=dose_times
         )
-        return redirect('medications:medication_list')  # Change to your list view
+        return redirect('medications:medication_list')  
 
     return render(request, 'medications/add_medication.html')
 
@@ -48,7 +48,7 @@ def edit_medication(request, pk):
         medication.times_per_day = request.POST.get('times_per_day')
         medication.dose_times = request.POST.getlist('dose_times')
         medication.save()
-        return redirect('medications:medication_list')  # Change to your list view
+        return redirect('medications:medication_list')  
 
     return render(request, 'medications/edit_medication.html', {'medication': medication})
 
@@ -58,7 +58,7 @@ def delete_medication(request, pk):
     """Delete a medication."""
     medication = get_object_or_404(Medication, pk=pk, user=request.user)
     medication.delete()
-    return redirect('medications:medication_list')  # Change to your list view
+    return redirect('medications:medication_list')  
 
 
 @login_required
@@ -78,15 +78,10 @@ def log_medication(request):
             time_taken=time_taken,
             dose_index=dose_index
         )
-        return redirect('medications:medication_list')  # Change to your list view
+        return redirect('medications:medication_list')  
 
     return render(request, 'medications/log_medication.html')
 
-
-# views.py
-from django.http import JsonResponse
-
 def keep_alive(request):
-    # Simply return a success response to reset the session timer
     return JsonResponse({'status': 'success'})
 

@@ -8,15 +8,11 @@ class LogoutOnServerStartMiddleware:
         self.logout_users()
 
     def logout_users(self):
-        # Get the current time
         now = timezone.now()
-        # Query all active sessions
         sessions = Session.objects.all()
-        # Iterate through each session and delete it
         for session in sessions:
-            session.delete()  # This will log out all users
+            session.delete()  
 
     def __call__(self, request):
-        # Here, you can include any request-specific logic if needed
         return self.get_response(request)
  

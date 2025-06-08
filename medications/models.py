@@ -18,5 +18,5 @@ class MedicationLog(models.Model):
     medication = models.ForeignKey(Medication, on_delete=models.CASCADE)
     date = models.DateField()
     time_taken = models.TimeField()
-    dose_index = models.IntegerField()  # Use this to identify which dose it corresponds to
+    dose_index = models.IntegerField()
 

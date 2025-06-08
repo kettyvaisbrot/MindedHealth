@@ -15,8 +15,8 @@ class SleepingLogSerializer(serializers.ModelSerializer):
     went_to_sleep_yesterday  = serializers.TimeField(required=False, allow_null=True, default=None)
     wake_up_time = serializers.TimeField(required=False, allow_null=True, default=None)
     class Meta:
-        model = SleepingLog  # Ensure you have your model referenced correctly.
-        fields = ['went_to_sleep_yesterday', 'wake_up_time']  # Include other fields as necessary.
+        model = SleepingLog  
+        fields = ['went_to_sleep_yesterday', 'wake_up_time']  
         
 
 
