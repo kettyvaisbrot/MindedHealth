@@ -8,31 +8,51 @@ from django.db import migrations, models
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('medications', '0005_timetaken_delete_medicationlog'),
+        ("medications", "0005_timetaken_delete_medicationlog"),
         migrations.swappable_dependency(settings.AUTH_USER_MODEL),
     ]
 
     operations = [
         migrations.AddField(
-            model_name='medication',
-            name='dose_times',
+            model_name="medication",
+            name="dose_times",
             field=models.JSONField(default=list),
         ),
         migrations.CreateModel(
-            name='MedicationLog',
+            name="MedicationLog",
             fields=[
-                ('id', models.BigAutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
-                ('date', models.DateField()),
-                ('time_taken', models.TimeField()),
-                ('dose_index', models.PositiveIntegerField()),
-                ('medication', models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, to='medications.medication')),
-                ('user', models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, to=settings.AUTH_USER_MODEL)),
+                (
+                    "id",
+                    models.BigAutoField(
+                        auto_created=True,
+                        primary_key=True,
+                        serialize=False,
+                        verbose_name="ID",
+                    ),
+                ),
+                ("date", models.DateField()),
+                ("time_taken", models.TimeField()),
+                ("dose_index", models.PositiveIntegerField()),
+                (
+                    "medication",
+                    models.ForeignKey(
+                        on_delete=django.db.models.deletion.CASCADE,
+                        to="medications.medication",
+                    ),
+                ),
+                (
+                    "user",
+                    models.ForeignKey(
+                        on_delete=django.db.models.deletion.CASCADE,
+                        to=settings.AUTH_USER_MODEL,
+                    ),
+                ),
             ],
             options={
-                'unique_together': {('user', 'medication', 'date', 'dose_index')},
+                "unique_together": {("user", "medication", "date", "dose_index")},
             },
         ),
         migrations.DeleteModel(
-            name='TimeTaken',
+            name="TimeTaken",
         ),
     ]

@@ -8,23 +8,23 @@ from django.db import migrations, models
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('dashboard', '0003_remove_seizurelog_last_memory'),
+        ("dashboard", "0003_remove_seizurelog_last_memory"),
     ]
 
     operations = [
         migrations.RenameField(
-            model_name='sleepinglog',
-            old_name='wake_time',
-            new_name='wake_up_time',
+            model_name="sleepinglog",
+            old_name="wake_time",
+            new_name="wake_up_time",
         ),
         migrations.AddField(
-            model_name='sleepinglog',
-            name='sleep_date',
+            model_name="sleepinglog",
+            name="sleep_date",
             field=models.DateField(default=django.utils.timezone.now),
         ),
         migrations.AddField(
-            model_name='sleepinglog',
-            name='wake_up_date',
+            model_name="sleepinglog",
+            name="wake_up_date",
             field=models.DateField(default=dashboard.models.get_tomorrow_date),
         ),
     ]

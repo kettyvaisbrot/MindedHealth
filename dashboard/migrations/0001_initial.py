@@ -15,62 +15,168 @@ class Migration(migrations.Migration):
 
     operations = [
         migrations.CreateModel(
-            name='FoodLog',
+            name="FoodLog",
             fields=[
-                ('id', models.BigAutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
-                ('date', models.DateField()),
-                ('breakfast_ate', models.BooleanField(default=False)),
-                ('breakfast_time', models.TimeField(blank=True, null=True)),
-                ('lunch_ate', models.BooleanField(default=False)),
-                ('lunch_time', models.TimeField(blank=True, null=True)),
-                ('dinner_ate', models.BooleanField(default=False)),
-                ('dinner_time', models.TimeField(blank=True, null=True)),
-                ('user', models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, to=settings.AUTH_USER_MODEL)),
+                (
+                    "id",
+                    models.BigAutoField(
+                        auto_created=True,
+                        primary_key=True,
+                        serialize=False,
+                        verbose_name="ID",
+                    ),
+                ),
+                ("date", models.DateField()),
+                ("breakfast_ate", models.BooleanField(default=False)),
+                ("breakfast_time", models.TimeField(blank=True, null=True)),
+                ("lunch_ate", models.BooleanField(default=False)),
+                ("lunch_time", models.TimeField(blank=True, null=True)),
+                ("dinner_ate", models.BooleanField(default=False)),
+                ("dinner_time", models.TimeField(blank=True, null=True)),
+                (
+                    "user",
+                    models.ForeignKey(
+                        on_delete=django.db.models.deletion.CASCADE,
+                        to=settings.AUTH_USER_MODEL,
+                    ),
+                ),
             ],
         ),
         migrations.CreateModel(
-            name='Meetings',
+            name="Meetings",
             fields=[
-                ('id', models.BigAutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
-                ('date', models.DateField()),
-                ('time', models.TimeField()),
-                ('met_people', models.BooleanField(default=False)),
-                ('positivity_rating', models.IntegerField(choices=[(1, '1'), (2, '2'), (3, '3'), (4, '4'), (5, '5')], default=1)),
-                ('meeting_type', models.CharField(blank=True, choices=[('family', 'With Family'), ('friends', 'With Friends'), ('business', 'Business Meeting'), ('strangers', 'With Strangers')], max_length=10, null=True)),
-                ('user', models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, to=settings.AUTH_USER_MODEL)),
+                (
+                    "id",
+                    models.BigAutoField(
+                        auto_created=True,
+                        primary_key=True,
+                        serialize=False,
+                        verbose_name="ID",
+                    ),
+                ),
+                ("date", models.DateField()),
+                ("time", models.TimeField()),
+                ("met_people", models.BooleanField(default=False)),
+                (
+                    "positivity_rating",
+                    models.IntegerField(
+                        choices=[(1, "1"), (2, "2"), (3, "3"), (4, "4"), (5, "5")],
+                        default=1,
+                    ),
+                ),
+                (
+                    "meeting_type",
+                    models.CharField(
+                        blank=True,
+                        choices=[
+                            ("family", "With Family"),
+                            ("friends", "With Friends"),
+                            ("business", "Business Meeting"),
+                            ("strangers", "With Strangers"),
+                        ],
+                        max_length=10,
+                        null=True,
+                    ),
+                ),
+                (
+                    "user",
+                    models.ForeignKey(
+                        on_delete=django.db.models.deletion.CASCADE,
+                        to=settings.AUTH_USER_MODEL,
+                    ),
+                ),
             ],
         ),
         migrations.CreateModel(
-            name='SeizureLog',
+            name="SeizureLog",
             fields=[
-                ('id', models.BigAutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
-                ('date', models.DateField()),
-                ('time', models.TimeField(blank=True, null=True)),
-                ('duration_minutes', models.PositiveIntegerField()),
-                ('last_memory', models.TextField()),
-                ('user', models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, to=settings.AUTH_USER_MODEL)),
+                (
+                    "id",
+                    models.BigAutoField(
+                        auto_created=True,
+                        primary_key=True,
+                        serialize=False,
+                        verbose_name="ID",
+                    ),
+                ),
+                ("date", models.DateField()),
+                ("time", models.TimeField(blank=True, null=True)),
+                ("duration_minutes", models.PositiveIntegerField()),
+                ("last_memory", models.TextField()),
+                (
+                    "user",
+                    models.ForeignKey(
+                        on_delete=django.db.models.deletion.CASCADE,
+                        to=settings.AUTH_USER_MODEL,
+                    ),
+                ),
             ],
         ),
         migrations.CreateModel(
-            name='SleepingLog',
+            name="SleepingLog",
             fields=[
-                ('id', models.BigAutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
-                ('date', models.DateField()),
-                ('sleep_time', models.TimeField()),
-                ('wake_time', models.TimeField()),
-                ('woke_up_during_night', models.BooleanField(default=False)),
-                ('user', models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, to=settings.AUTH_USER_MODEL)),
+                (
+                    "id",
+                    models.BigAutoField(
+                        auto_created=True,
+                        primary_key=True,
+                        serialize=False,
+                        verbose_name="ID",
+                    ),
+                ),
+                ("date", models.DateField()),
+                ("sleep_time", models.TimeField()),
+                ("wake_time", models.TimeField()),
+                ("woke_up_during_night", models.BooleanField(default=False)),
+                (
+                    "user",
+                    models.ForeignKey(
+                        on_delete=django.db.models.deletion.CASCADE,
+                        to=settings.AUTH_USER_MODEL,
+                    ),
+                ),
             ],
         ),
         migrations.CreateModel(
-            name='SportLog',
+            name="SportLog",
             fields=[
-                ('id', models.BigAutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
-                ('date', models.DateField()),
-                ('did_sport', models.BooleanField(default=False)),
-                ('sport_type', models.CharField(blank=True, choices=[('swimming', 'Swimming'), ('running', 'Running'), ('walking', 'Walking'), ('gym', 'Gym Session'), ('other', 'Other')], max_length=10, null=True)),
-                ('other_sport', models.CharField(blank=True, max_length=100, null=True)),
-                ('user', models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, to=settings.AUTH_USER_MODEL)),
+                (
+                    "id",
+                    models.BigAutoField(
+                        auto_created=True,
+                        primary_key=True,
+                        serialize=False,
+                        verbose_name="ID",
+                    ),
+                ),
+                ("date", models.DateField()),
+                ("did_sport", models.BooleanField(default=False)),
+                (
+                    "sport_type",
+                    models.CharField(
+                        blank=True,
+                        choices=[
+                            ("swimming", "Swimming"),
+                            ("running", "Running"),
+                            ("walking", "Walking"),
+                            ("gym", "Gym Session"),
+                            ("other", "Other"),
+                        ],
+                        max_length=10,
+                        null=True,
+                    ),
+                ),
+                (
+                    "other_sport",
+                    models.CharField(blank=True, max_length=100, null=True),
+                ),
+                (
+                    "user",
+                    models.ForeignKey(
+                        on_delete=django.db.models.deletion.CASCADE,
+                        to=settings.AUTH_USER_MODEL,
+                    ),
+                ),
             ],
         ),
     ]

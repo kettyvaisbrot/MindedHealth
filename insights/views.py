@@ -5,14 +5,12 @@ from datetime import timedelta
 from django.conf import settings
 import openai
 
-from dashboard.models import (
-    FoodLog, SportLog, SleepingLog,
-    Meetings, SeizureLog
-)
+from dashboard.models import FoodLog, SportLog, SleepingLog, Meetings, SeizureLog
 
-from medications.models import Medication, MedicationLog
+from medications.models import MedicationLog
 
 openai.api_key = settings.OPENAI_API_KEY
+
 
 @login_required
 def ai_insights_view(request):
@@ -26,13 +24,21 @@ def ai_insights_view(request):
     sleep_logs = SleepingLog.objects.filter(user=user, date__range=(week_ago, today))
     meetings_logs = Meetings.objects.filter(user=user, date__range=(week_ago, today))
     seizure_logs = SeizureLog.objects.filter(user=user, date__range=(week_ago, today))
-    med_logs = MedicationLog.objects.filter(user=user, date__range=(week_ago, today)).select_related("medication")
+    med_logs = MedicationLog.objects.filter(
+        user=user, date__range=(week_ago, today)
+    ).select_related("medication")
 
     # Check if user has at least one log
-    if not any([
-        food_logs.exists(), sport_logs.exists(), sleep_logs.exists(),
-        meetings_logs.exists(), seizure_logs.exists(), med_logs.exists()
-    ]):
+    if not any(
+        [
+            food_logs.exists(),
+            sport_logs.exists(),
+            sleep_logs.exists(),
+            meetings_logs.exists(),
+            seizure_logs.exists(),
+            med_logs.exists(),
+        ]
+    ):
         message = "😊 It’s time to get to know each other! Start documenting your day-to-day life via the dashboard."
         return render(request, "insights/insights.html", {"insights": message})
 
@@ -62,11 +68,14 @@ def ai_insights_view(request):
         response = openai.chat.completions.create(
             model="gpt-4o",
             messages=[
-                {"role": "system", "content": "You are a compassionate mental health assistant."},
-                {"role": "user", "content": prompt}
+                {
+                    "role": "system",
+                    "content": "You are a compassionate mental health assistant.",
+                },
+                {"role": "user", "content": prompt},
             ],
             max_tokens=300,
-            temperature=0.7
+            temperature=0.7,
         )
         ai_response = response.choices[0].message.content.strip()
 
