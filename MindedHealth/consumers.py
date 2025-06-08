@@ -45,7 +45,7 @@ class ChatConsumer(AsyncWebsocketConsumer):
                 raise KeyError('Missing "message" in the received data')
 
             message = text_data_json['message']
-            user = text_data_json.get('user', None)  # user is optional
+            user = text_data_json.get('user', None)  
 
             # Log the received message and user for debugging
             print(f"Received message: {message}, User: {user}")
@@ -53,8 +53,6 @@ class ChatConsumer(AsyncWebsocketConsumer):
             # Update connected users with the pseudonym if it's their first message
             if user and self.channel_name not in self.connected_users:
                 self.connected_users[self.channel_name] = user
-
-            # Add timestamp to the message
             current_time = datetime.datetime.now().strftime('%I:%M:%S %p')
 
             # Send the message to the room group

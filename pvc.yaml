@@ -7,5 +7,5 @@ spec:
     - ReadWriteOnce
   resources:
     requests:
-      storage: 1Gi  # Adjust the size according to your needs (1Gi = 1 GB)
-  storageClassName: standard  # Make sure to use the right storage class available in your EKS cluster
+      storage: 1Gi  
+  storageClassName: standard 

@@ -2,6 +2,7 @@ from django.db import models
 from django.contrib.auth.models import User
 from django.utils import timezone
 
+
 class FoodLog(models.Model):
     MEAL_CHOICES = [
         ('breakfast', 'Breakfast'),
@@ -42,9 +43,7 @@ class SportLog(models.Model):
             return f"Sport Log on {self.date} at {self.sport_time.strftime('%H:%M')} for {self.user.username}"
         else:
             return f"Sport Log on {self.date} for {self.user.username}"
-from django.db import models
-from django.contrib.auth.models import User
-from django.utils import timezone
+
 
 def get_tomorrow_date():
     return timezone.now().date() + timezone.timedelta(days=1)

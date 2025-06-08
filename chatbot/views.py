@@ -3,6 +3,7 @@ from django.http import JsonResponse
 from django.views.decorators.csrf import csrf_exempt
 import json
 from .ai_chatbot import generate_ai_response  # Import the function that interacts with OpenAI
+from django.shortcuts import render
 
 @csrf_exempt  # This decorator is necessary for allowing POST requests without CSRF protection for now
 def chatbot_response(request):
@@ -23,9 +24,9 @@ def chatbot_response(request):
         
         except Exception as e:
             return JsonResponse({'error': str(e)}, status=400)
-# chatbot/views.py
-from django.shortcuts import render
+
+
 
 def chatbot_page(request):
-    return render(request, 'chatbot/chat.html')  # Correct path for the template
+    return render(request, 'chatbot/chat.html')  
 

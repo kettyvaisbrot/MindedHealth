@@ -15,30 +15,23 @@ from dotenv import load_dotenv
 import os
 
 load_dotenv() 
-# Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
 
 
 # Quick-start development settings - unsuitable for production
 # See https://docs.djangoproject.com/en/5.0/howto/deployment/checklist/
-
-# SECURITY WARNING: keep the secret key used in production secret!
 SECRET_KEY = os.getenv('DJANGO_SECRET_KEY')
 ALLOWED_HOSTS = ['*']
 
 
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = True
-
-
+DEBUG = False
 
 # Access environment variables
 GOOGLE_SEARCH_API_KEY = os.getenv('GOOGLE_SEARCH_API_KEY')
 GOOGLE_SEARCH_CSE_ID = os.getenv('GOOGLE_SEARCH_CSE_ID')
 ASGI_APPLICATION = 'MindedHealth.asgi.application'
 OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
-
-
 
 CHANNEL_LAYERS = {
     'default': {
@@ -52,18 +45,14 @@ CHANNEL_LAYERS = {
 CACHES = {
     'default': {
         'BACKEND': 'django_redis.cache.RedisCache',
-        'LOCATION': 'redis://localhost:6379/1',  # Adjust this if needed
+        'LOCATION': 'redis://localhost:6379/1',
         'OPTIONS': {
             'CLIENT_CLASS': 'django_redis.client.DefaultClient',
         }
     }
 }
 
-
-
-
 # Application definition
-
 INSTALLED_APPS = [
     'insights',
     'drf_yasg',
@@ -83,33 +72,29 @@ INSTALLED_APPS = [
     'django.contrib.staticfiles',
 ]
 
-
-# settings.py
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
-    'django.contrib.sessions.middleware.SessionMiddleware',  # Ensure this is before your custom middleware
-    'MindedHealth.middleware.LogoutOnServerStartMiddleware',  # Your custom middleware to log out on server start
+    'django.contrib.sessions.middleware.SessionMiddleware',
+    'MindedHealth.middleware.LogoutOnServerStartMiddleware', 
     'django.middleware.common.CommonMiddleware',
     'django.middleware.csrf.CsrfViewMiddleware',
-    'django.contrib.auth.middleware.AuthenticationMiddleware',  # Should come after session middleware
+    'django.contrib.auth.middleware.AuthenticationMiddleware',  
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
 ]
+
 LOGOUT_REDIRECT_URL = '/'  # Redirect to home page after logout
 ROOT_URLCONF = 'MindedHealth.urls'
-import os
-from pathlib import Path
 # Set session timeout to 2 minutes
 SESSION_COOKIE_AGE = 120  # Time in seconds (2 minutes)
-SESSION_EXPIRE_AT_BROWSER_CLOSE = True  # Optional: Logout when the browser is closed
-BASE_DIR = Path(__file__).resolve().parent.parent
+SESSION_EXPIRE_AT_BROWSER_CLOSE = True 
 SESSION_ENGINE = 'django.contrib.sessions.backends.cache'
 SESSION_CACHE_ALIAS = 'default'
 
 TEMPLATES = [
     {
         'BACKEND': 'django.template.backends.django.DjangoTemplates',
-        'DIRS': [os.path.join(BASE_DIR, 'templates')],  # Ensure this is correct
+        'DIRS': [os.path.join(BASE_DIR, 'templates')],
         'APP_DIRS': True,
         'OPTIONS': {
             'context_processors': [
