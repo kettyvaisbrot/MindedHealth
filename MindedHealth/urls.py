@@ -48,16 +48,11 @@ urlpatterns = [
     path('my_statistics/', include(('my_statistics.urls', 'my_statistics'), namespace='my_statistics')), 
     path('what_interested_you/', include('what_interested_you.urls')),
     path('keep-alive/', views.keep_alive, name='keep_alive'),
-    path('chat/<str:room_name>/', views.room, name='chat_room'),  # Add chat view
-    path('chatbot/', include('chatbot.urls')),  # Include the chatbot app URLs
+    path('chat/<str:room_name>/', views.room, name='chat_room'),  
+    path('chatbot/', include('chatbot.urls')), 
     re_path(r'^swagger(?P<format>\.json|\.yaml)$', schema_view.without_ui(cache_timeout=0), name='schema-json'),
     path('swagger/', schema_view.with_ui('swagger', cache_timeout=0), name='schema-swagger-ui'),
     path('redoc/', schema_view.with_ui('redoc', cache_timeout=0), name='schema-redoc'),
     path('insights/', include('insights.urls')),
-
-
-
-
-
 ]
 

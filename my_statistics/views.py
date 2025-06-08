@@ -6,14 +6,12 @@ from calendar import month_name
 from dashboard.models import FoodLog, SportLog, SleepingLog, Meetings, SeizureLog
 import calendar
 from medications.models import Medication, MedicationLog
-
-# views.py
 from django.http import JsonResponse
+from django.db.models import Count
 
 def keep_alive(request):
     # Simply return a success response to reset the session timer
     return JsonResponse({'status': 'success'})
-
 
 @login_required
 def statistics_view(request):
@@ -118,9 +116,6 @@ def get_avg_meal_time(user, year, month, meal_type):
         avg_time = None
 
     return avg_time
-
-from django.db.models import Count
-
 
 def get_sport_statistics(user, year, month):
     """Helper function to retrieve sport statistics for a given user, year, and month."""

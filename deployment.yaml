@@ -3,7 +3,7 @@ kind: Deployment
 metadata:
   name: mindedhealth-deployment
 spec:
-  replicas: 2  # Adjust the number of replicas as needed
+  replicas: 2  
   selector:
     matchLabels:
       app: mindedhealth
@@ -14,12 +14,12 @@ spec:
     spec:
       containers:
       - name: mindedhealth
-        image: kettyvaisbrot/mindedhealth:latest  # Use your Docker Hub image
+        image: kettyvaisbrot/mindedhealth:latest  
         ports:
-        - containerPort: 8000  # Replace with the port your app is running on
+        - containerPort: 8000  
         volumeMounts:
         - name: sqlite-storage
-          mountPath: /app/db  # Mount the persistent volume to the container path where SQLite is stored
+          mountPath: /app/db  
         env:
         - name: GOOGLE_SEARCH_API_KEY
           value: "AIzaSyDlMEso53m-NHo-3A4VM3BQKMV_5u1Rgzs"
@@ -28,6 +28,6 @@ spec:
       volumes:
       - name: sqlite-storage
         persistentVolumeClaim:
-          claimName: sqlite-pvc  # Use PVC to claim storage
+          claimName: sqlite-pvc 
     
 

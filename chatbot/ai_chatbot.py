@@ -2,17 +2,16 @@
 import openai
 import os
 
-# Set the OpenAI API key (you can load this from an environment variable)
-openai.api_key = os.getenv("OPENAI_API_KEY")  # Ensure the key is set in your .env file
+openai.api_key = os.getenv("OPENAI_API_KEY")  
 
 def generate_ai_response(user_input):
     try:
         # Send user input to OpenAI's GPT model for a response
         response = openai.Completion.create(
-            engine="text-davinci-003",  # Choose the desired OpenAI model (e.g., GPT-3)
-            prompt=user_input,          # The input from the user
-            max_tokens=150,             # Limit the response length (you can adjust this)
-            temperature=0.7,            # Adjust creativity of the response
+            engine="text-davinci-003",  
+            prompt=user_input,          
+            max_tokens=150,             
+            temperature=0.7,            
         )
 
         # Return the AI's response

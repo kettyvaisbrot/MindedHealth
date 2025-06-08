@@ -25,18 +25,15 @@ from rest_framework.permissions import IsAuthenticated
 from medications.models import MedicationLog, Medication
 from medications.serializers import MedicationLogSerializer
 from django.views.generic import View
+from django.http import JsonResponse
 
 def dashboard_home(request):
-    # Get date from request, or set it to empty if not provided
     date_str = request.GET.get('date', '')
     today = timezone.now().date().strftime('%Y-%m-%d')    
-
-    
     # Check if date is provided and valid
     if not date_str:
         messages.warning(request, "Date is required before displaying data.")
-        return render(request, 'dashboard/dashboard.html')  # Redirect to the same page
-
+        return render(request, 'dashboard/dashboard.html')
     # Validate date format
     try:
         date = datetime.strptime(date_str, '%Y-%m-%d').date()
@@ -87,14 +84,10 @@ class MedicationLogAPIView(APIView):
 
     def post(self, request):
         date = request.data.get('date', timezone.now().date().strftime('%Y-%m-%d'))  # Default to today
-        
-        # Create a mutable copy of the request data
         data = request.data.copy()
-        data['user'] = request.user.id  # Set the user field to the logged-in user's ID
-
+        data['user'] = request.user.id
         serializer = MedicationLogSerializer(data=data)
         if serializer.is_valid():
-            # Assuming you also have a dose_index in the request data
             MedicationLog.objects.update_or_create(
                 user=request.user,
                 date=date,
@@ -108,13 +101,8 @@ class MedicationLogAPIView(APIView):
 
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
-# views.py
-from django.http import JsonResponse
-
 def keep_alive(request):
-    # Simply return a success response to reset the session timer
     return JsonResponse({'status': 'success'})
-
 
 class FoodLogAPIView(APIView):
     @swagger_auto_schema(
@@ -200,7 +188,6 @@ class SportLogAPIView(APIView):
                 date=date,
                 defaults=serializer.validated_data
             )
-            # Redirect to the dashboard with the date parameter
             return HttpResponseRedirect(reverse('dashboard:dashboard_home') + f'?date={date}')
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
@@ -246,7 +233,6 @@ class SleepingLogAPIView(APIView):
                 date=date,
                 defaults=serializer.validated_data
             )
-            # Redirect to the dashboard with the date parameter
             return HttpResponseRedirect(reverse('dashboard:dashboard_home') + f'?date={date}')
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
@@ -293,7 +279,6 @@ class MeetingsAPIView(APIView):
                 date=date,
                 defaults=serializer.validated_data
             )
-            # Redirect to the dashboard with the date parameter
             return HttpResponseRedirect(reverse('dashboard:dashboard_home') + f'?date={date}')
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
@@ -358,7 +343,6 @@ class DailyDocumentationView(View):
         documentation_data = {}
 
         if date != current_date.strftime('%Y-%m-%d'):
-            # Fetch daily documentation data based on the provided date
             api_url = f'http://localhost:8000/daily-documentation/{date}/'
             response = requests.get(api_url)
 
@@ -417,14 +401,10 @@ def log_medication(request, date):
                 time_taken=time_taken,
                 dose_index=next_dose_index
             )
-            print(f"Logging medication at time {time_taken} with dose_index {next_dose_index}")
-
-            # Pass a success message to indicate that the entry was saved
             success_message = "Medication entry saved successfully!"
 
         except Exception as e:
             # Handle any errors and provide feedback
-            print(f"An error occurred: {e}")
             return render(request, 'dashboard/dashboard.html', {
                 'error_message': f"An error occurred: {e}",
                 'date': date
@@ -433,7 +413,6 @@ def log_medication(request, date):
     # Retrieve all logs for the current date to show on the dashboard
     logs_for_date = MedicationLog.objects.filter(user=request.user, date=date)
     
-    # Render the same page with the current date data and success message if available
     return render(request, 'dashboard/dashboard.html', {
         'date': date,
         'logs': logs_for_date,
