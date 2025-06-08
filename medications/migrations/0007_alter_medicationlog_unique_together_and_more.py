@@ -6,17 +6,17 @@ from django.db import migrations, models
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('medications', '0006_medication_dose_times_medicationlog_delete_timetaken'),
+        ("medications", "0006_medication_dose_times_medicationlog_delete_timetaken"),
     ]
 
     operations = [
         migrations.AlterUniqueTogether(
-            name='medicationlog',
+            name="medicationlog",
             unique_together=set(),
         ),
         migrations.AlterField(
-            model_name='medicationlog',
-            name='dose_index',
+            model_name="medicationlog",
+            name="dose_index",
             field=models.IntegerField(),
         ),
     ]

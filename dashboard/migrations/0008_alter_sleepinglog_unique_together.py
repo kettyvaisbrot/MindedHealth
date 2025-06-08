@@ -6,12 +6,12 @@ from django.db import migrations
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('dashboard', '0007_alter_sleepinglog_sleep_time_and_more'),
+        ("dashboard", "0007_alter_sleepinglog_sleep_time_and_more"),
     ]
 
     operations = [
         migrations.AlterUniqueTogether(
-            name='sleepinglog',
+            name="sleepinglog",
             unique_together=set(),
         ),
     ]

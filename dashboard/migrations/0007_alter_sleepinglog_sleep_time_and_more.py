@@ -7,23 +7,23 @@ from django.db import migrations, models
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('dashboard', '0006_rename_wake_up_time_sleepinglog_wake_time'),
+        ("dashboard", "0006_rename_wake_up_time_sleepinglog_wake_time"),
         migrations.swappable_dependency(settings.AUTH_USER_MODEL),
     ]
 
     operations = [
         migrations.AlterField(
-            model_name='sleepinglog',
-            name='sleep_time',
+            model_name="sleepinglog",
+            name="sleep_time",
             field=models.TimeField(blank=True, null=True),
         ),
         migrations.AlterField(
-            model_name='sleepinglog',
-            name='wake_time',
+            model_name="sleepinglog",
+            name="wake_time",
             field=models.TimeField(blank=True, null=True),
         ),
         migrations.AlterUniqueTogether(
-            name='sleepinglog',
-            unique_together={('user', 'date')},
+            name="sleepinglog",
+            unique_together={("user", "date")},
         ),
     ]

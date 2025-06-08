@@ -5,9 +5,9 @@ from django.utils import timezone
 
 class FoodLog(models.Model):
     MEAL_CHOICES = [
-        ('breakfast', 'Breakfast'),
-        ('lunch', 'Lunch'),
-        ('dinner', 'Dinner'),
+        ("breakfast", "Breakfast"),
+        ("lunch", "Lunch"),
+        ("dinner", "Dinner"),
     ]
 
     user = models.ForeignKey(User, on_delete=models.CASCADE)
@@ -22,21 +22,24 @@ class FoodLog(models.Model):
     def __str__(self):
         return f"Food Log on {self.date} for {self.user.username}"
 
+
 class SportLog(models.Model):
     SPORT_CHOICES = [
-        ('swimming', 'Swimming'),
-        ('running', 'Running'),
-        ('walking', 'Walking'),
-        ('gym', 'Gym Session'),
-        ('other', 'Other'),
+        ("swimming", "Swimming"),
+        ("running", "Running"),
+        ("walking", "Walking"),
+        ("gym", "Gym Session"),
+        ("other", "Other"),
     ]
 
     user = models.ForeignKey(User, on_delete=models.CASCADE)
     date = models.DateField()
     did_sport = models.BooleanField(default=False)
-    sport_type = models.CharField(max_length=10, choices=SPORT_CHOICES, null=True, blank=True)
+    sport_type = models.CharField(
+        max_length=10, choices=SPORT_CHOICES, null=True, blank=True
+    )
     other_sport = models.CharField(max_length=100, null=True, blank=True)
-    sport_time = models.TimeField(default='00:00:00')  # New field for sport time
+    sport_time = models.TimeField(default="00:00:00")  # New field for sport time
 
     def __str__(self):
         if self.sport_time:
@@ -49,37 +52,39 @@ def get_tomorrow_date():
     return timezone.now().date() + timezone.timedelta(days=1)
 
 
-
 class SleepingLog(models.Model):
     user = models.ForeignKey(User, on_delete=models.CASCADE)
     date = models.DateField(auto_now_add=True)
-    went_to_sleep_yesterday  = models.TimeField(null=True, blank=True)  # NEW NAME
-    wake_up_time = models.TimeField(blank=True, null=True) 
+    went_to_sleep_yesterday = models.TimeField(null=True, blank=True)  # NEW NAME
+    wake_up_time = models.TimeField(blank=True, null=True)
     woke_up_during_night = models.BooleanField(default=False)  # Add this line
-
 
     def __str__(self):
         return f"{self.date} - Sleep Time: {self.went_to_sleep_yesterday } - Wake Up Time: {self.wake_up_time}"
 
+
 class Meetings(models.Model):
     MEETING_TYPES_CHOICES = [
-        ('family', 'With Family'),
-        ('friends', 'With Friends'),
-        ('business', 'Business Meeting'),
-        ('strangers', 'With Strangers'),
-
+        ("family", "With Family"),
+        ("friends", "With Friends"),
+        ("business", "Business Meeting"),
+        ("strangers", "With Strangers"),
     ]
     user = models.ForeignKey(User, on_delete=models.CASCADE)
     date = models.DateField()
     time = models.TimeField()
     met_people = models.BooleanField(default=False)
-    positivity_rating = models.IntegerField(default=1, choices=[(i, str(i)) for i in range(1, 6)])
-    meeting_type = models.CharField(max_length=10, choices=MEETING_TYPES_CHOICES, null=True, blank=True)
-    
+    positivity_rating = models.IntegerField(
+        default=1, choices=[(i, str(i)) for i in range(1, 6)]
+    )
+    meeting_type = models.CharField(
+        max_length=10, choices=MEETING_TYPES_CHOICES, null=True, blank=True
+    )
 
     def __str__(self):
         return f"Meeting on {self.date}"
-    
+
+
 class SeizureLog(models.Model):
     user = models.ForeignKey(User, on_delete=models.CASCADE)
     date = models.DateField()
@@ -87,10 +92,4 @@ class SeizureLog(models.Model):
     duration_minutes = models.PositiveIntegerField()
 
     def __str__(self):
-            return f"Seizure at {self.date} {self.time}"
-    
-
-
-
-
-
+        return f"Seizure at {self.date} {self.time}"
