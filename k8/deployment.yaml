@@ -22,7 +22,7 @@ spec:
           mountPath: /app/db  
         env:
         - name: GOOGLE_SEARCH_API_KEY
-          value: "REDACTED"
+          value: "AIzaSyDlMEso53m-NHo-3A4VM3BQKMV_5u1Rgzs"
         - name: GOOGLE_SEARCH_CSE_ID
           value: "046ede44ce9e04a66"
       volumes:
