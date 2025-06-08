@@ -6,13 +6,13 @@ from django.db import migrations, models
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('dashboard', '0010_remove_sleepinglog_wake_time_and_more'),
+        ("dashboard", "0010_remove_sleepinglog_wake_time_and_more"),
     ]
 
     operations = [
         migrations.AddField(
-            model_name='sleepinglog',
-            name='woke_up_during_night',
+            model_name="sleepinglog",
+            name="woke_up_during_night",
             field=models.BooleanField(default=False),
         ),
     ]

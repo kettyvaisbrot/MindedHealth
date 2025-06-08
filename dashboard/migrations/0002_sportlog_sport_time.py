@@ -6,13 +6,13 @@ from django.db import migrations, models
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('dashboard', '0001_initial'),
+        ("dashboard", "0001_initial"),
     ]
 
     operations = [
         migrations.AddField(
-            model_name='sportlog',
-            name='sport_time',
-            field=models.TimeField(default='00:00:00'),
+            model_name="sportlog",
+            name="sport_time",
+            field=models.TimeField(default="00:00:00"),
         ),
     ]

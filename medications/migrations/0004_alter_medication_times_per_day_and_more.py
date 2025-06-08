@@ -7,18 +7,18 @@ from django.db import migrations, models
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('medications', '0003_alter_medication_user_alter_medicationlog_user'),
+        ("medications", "0003_alter_medication_user_alter_medicationlog_user"),
         migrations.swappable_dependency(settings.AUTH_USER_MODEL),
     ]
 
     operations = [
         migrations.AlterField(
-            model_name='medication',
-            name='times_per_day',
+            model_name="medication",
+            name="times_per_day",
             field=models.PositiveIntegerField(),
         ),
         migrations.AlterUniqueTogether(
-            name='medicationlog',
-            unique_together={('user', 'medication', 'date', 'time_taken')},
+            name="medicationlog",
+            unique_together={("user", "medication", "date", "time_taken")},
         ),
     ]

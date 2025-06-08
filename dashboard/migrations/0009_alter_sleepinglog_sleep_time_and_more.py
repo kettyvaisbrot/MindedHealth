@@ -6,18 +6,18 @@ from django.db import migrations, models
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('dashboard', '0008_alter_sleepinglog_unique_together'),
+        ("dashboard", "0008_alter_sleepinglog_unique_together"),
     ]
 
     operations = [
         migrations.AlterField(
-            model_name='sleepinglog',
-            name='sleep_time',
+            model_name="sleepinglog",
+            name="sleep_time",
             field=models.TimeField(),
         ),
         migrations.AlterField(
-            model_name='sleepinglog',
-            name='wake_time',
+            model_name="sleepinglog",
+            name="wake_time",
             field=models.TimeField(),
         ),
     ]
