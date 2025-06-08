@@ -7,6 +7,6 @@ spec:
     app: mindedhealth
   ports:
     - protocol: TCP
-      port: 80  # External port for your app
-      targetPort: 8000  # Internal port your app listens to
-  type: LoadBalancer  # Use LoadBalancer for external access or ClusterIP for internal-only access
+      port: 80  
+      targetPort: 8000  
+  type: LoadBalancer  
