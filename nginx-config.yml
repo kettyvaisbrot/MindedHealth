@@ -4,4 +4,4 @@ metadata:
   name: nginx-config
 data:
   nginx.conf: |
-    # Paste your nginx.conf contents here
+    

@@ -9,9 +9,9 @@ spec:
   accessModes:
     - ReadWriteOnce
   persistentVolumeReclaimPolicy: Retain
-  storageClassName: standard  # Ensure this is the same as the PVC's storageClassName
+  storageClassName: standard  
   hostPath:
-    path: /mnt/data/redis-master  # If you're using hostPath, change this as needed.
+    path: /mnt/data/redis-master  
 ---
 apiVersion: v1
 kind: PersistentVolume
@@ -24,6 +24,6 @@ spec:
   accessModes:
     - ReadWriteOnce
   persistentVolumeReclaimPolicy: Retain
-  storageClassName: standard  # Ensure this is the same as the PVC's storageClassName
+  storageClassName: standard  
   hostPath:
-    path: /mnt/data/redis-replicas  # Adjust path as needed
+    path: /mnt/data/redis-replicas  
