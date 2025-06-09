@@ -43,16 +43,21 @@ CHANNEL_LAYERS = {
     },
 }
 
+
+import os
+
+REDIS_HOST = os.getenv('REDIS_HOST', 'localhost')
+
+CELERY_BROKER_URL = f'redis://{REDIS_HOST}:6379/0'
 CACHES = {
     "default": {
         "BACKEND": "django_redis.cache.RedisCache",
-        "LOCATION": "redis://localhost:6379/1",
+        "LOCATION": f"redis://{REDIS_HOST}:6379/1",
         "OPTIONS": {
             "CLIENT_CLASS": "django_redis.client.DefaultClient",
-        },
+        }
     }
 }
-
 # Application definition
 INSTALLED_APPS = [
     "insights",
