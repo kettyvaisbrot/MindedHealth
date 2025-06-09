@@ -47,12 +47,16 @@ CHANNEL_LAYERS = {
 import os
 
 REDIS_HOST = os.getenv('REDIS_HOST', 'redis')
+REDIS_PORT = 6379
+REDIS_URL = f'redis://{REDIS_HOST}:{REDIS_PORT}/0'
+
+
 
 CELERY_BROKER_URL = f'redis://{REDIS_HOST}:6379/0'
 CACHES = {
     "default": {
         "BACKEND": "django_redis.cache.RedisCache",
-        "LOCATION": f"redis://{REDIS_HOST}:6379/1",
+        "LOCATION": REDIS_URL,
         "OPTIONS": {
             "CLIENT_CLASS": "django_redis.client.DefaultClient",
         }
