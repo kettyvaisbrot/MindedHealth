@@ -46,7 +46,7 @@ CHANNEL_LAYERS = {
 
 import os
 
-REDIS_HOST = os.getenv('REDIS_HOST', 'localhost')
+REDIS_HOST = os.getenv('REDIS_HOST', 'redis')
 
 CELERY_BROKER_URL = f'redis://{REDIS_HOST}:6379/0'
 CACHES = {
