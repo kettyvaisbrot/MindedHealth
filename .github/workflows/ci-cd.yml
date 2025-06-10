@@ -35,7 +35,7 @@ jobs:
         username: ${{ secrets.EC2_USER }}
         key: ${{ secrets.EC2_SSH_KEY }}
         script: |
-          cd mindedhealth
+          cd MindedHealth
           docker pull ${{ secrets.DOCKER_USERNAME }}/mindedhealth:latest
           docker-compose down
           docker-compose up -d --build
