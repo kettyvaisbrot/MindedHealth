@@ -4,7 +4,7 @@ from django.views.decorators.csrf import csrf_exempt
 import json
 from .ai_chatbot import (
     generate_ai_response,
-)  # Import the function that interacts with OpenAI
+)
 from django.shortcuts import render
 
 
