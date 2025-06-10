@@ -39,7 +39,7 @@ jobs:
           echo "${{ secrets.DOTENV_CONTENT }}" > k8/.env 
           docker pull ${{ secrets.DOCKER_USERNAME }}/mindedhealth:latest
           cd k8
-          docker-compose down
+          docker-compose down --volumes --remove-orphans
           docker-compose up -d --build
 
 
