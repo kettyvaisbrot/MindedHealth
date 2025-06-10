@@ -98,7 +98,6 @@
             {% endfor %}
         {% endif %}
         <h1>Dashboard</h1>
-        <!-- Back Button -->
         <div class="back-button">
             <a href="{% url 'home' %}">Back to Home</a>
         </div>
@@ -140,10 +139,7 @@
             {% else %}
                 <p>No medication data available for {{ date }}</p>
             {% endif %}
-            
         
-
-            <!-- Sport Log Section -->
             {% if sport_logs %}
                 <h2>Sport Log for {{ date }}</h2>
                 <ul>
@@ -181,7 +177,6 @@
             {% else %}
                 <p>No sleeping data available for {{ date }}</p>
             {% endif %}
-            <!-- Meeting Log Section -->
             {% if meetings_logs %}
                 <h2>Meeting Log for {{ date }}</h2>
                 <ul>
@@ -202,7 +197,6 @@
             {% else %}
                 <p>No meetings data available for {{ date }}</p>
             {% endif %}
-            <!-- Seizure Log Section -->
             {% if seizure_logs %}
                 <h2>Seizure Log for {{ date }}</h2>
                 <ul>
@@ -274,7 +268,6 @@
             <br>
             <button type="submit">Save</button>
         </form>
-        <!-- Sleeping Log Form -->
         <form method="POST" action="{% url 'dashboard:sleeping_log_api' %}">
             {% csrf_token %}
             <input type="hidden" name="date" value="{{ date|date:'Y-m-d' }}">
@@ -363,7 +356,6 @@
                 <li>{{ log.medication.name }} - {{ log.time_taken }} (Dose {{ log.dose_index }})</li>
             {% endfor %}
         </ul>
-            <!-- Warning Modal -->
     <div id="logoutWarning" style="display: none; position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); padding: 20px; border: 1px solid #ccc; background: #fff; z-index: 1000; text-align: center;">
         <p>You will be logged out in 30 seconds due to inactivity.</p>
         <button onclick="stayOnSite()">Stay Logged In</button>
@@ -379,13 +371,10 @@
 
         function stayOnSite() {
             document.getElementById("logoutWarning").style.display = "none";
-
-            // Reset session or activity timers
             fetch('/keep-alive/', { method: 'GET' })
                 .then(response => console.log('Session extended'))
                 .catch(error => console.error('Error extending session:', error));
 
-            // Restart the warning timer
             startWarningTimer();
         }
 
@@ -394,11 +383,9 @@
         }
 
         function startWarningTimer() {
-            // Adjust this to be 90 seconds if the total logout is 120 seconds
-            warningTimer = setTimeout(showWarning, 90000); // Show warning 30 seconds before logout
+            warningTimer = setTimeout(showWarning, 90000); 
         }
 
-        // Start the warning timer on page load
         startWarningTimer();
     </script>
 
@@ -407,7 +394,7 @@
                 const timeFields = document.getElementById("time-fields");
                 const newTimeField = document.createElement("input");
                 newTimeField.type = "time";
-                newTimeField.name = "time_taken";  // Keep the same name for multiple time inputs
+                newTimeField.name = "time_taken";
                 newTimeField.required = true;
                 timeFields.appendChild(newTimeField);
             }
@@ -416,33 +403,29 @@
                  
     {% endif %}
     <script>
-        // Define a timeout for 2 minutes (120,000 milliseconds)
-        let timeoutDuration = 120000; // 2 minutes
+        let timeoutDuration = 120000; 
         let logoutUrl = "/logout/";
 
-        // Reset the timeout on user activity
         function resetTimeout() {
             clearTimeout(logoutTimer);
             logoutTimer = setTimeout(logoutUser, timeoutDuration);
         }
 
-        // Function to send POST request for logout
         function logoutUser() {
             fetch(logoutUrl, {
-                method: 'POST', // Ensure this is a POST request
+                method: 'POST',
                 headers: {
-                    'X-CSRFToken': getCookie('csrftoken'), // Add CSRF token
+                    'X-CSRFToken': getCookie('csrftoken'), 
                 }
             })
             .then(response => {
                 if (response.redirected) {
-                    window.location.href = response.url; // Redirect after logout
+                    window.location.href = response.url;
                 }
             })
             .catch(error => console.error('Logout error:', error));
         }
 
-        // Function to get CSRF token from cookies
         function getCookie(name) {
             let cookieValue = null;
             if (document.cookie && document.cookie !== '') {
@@ -458,7 +441,6 @@
             return cookieValue;
         }
 
-        // Set the initial logout timer and listen for activity
         let logoutTimer = setTimeout(logoutUser, timeoutDuration);
         document.addEventListener('mousemove', resetTimeout);
         document.addEventListener('keypress', resetTimeout);

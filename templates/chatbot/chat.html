@@ -1,4 +1,3 @@
-<!-- chatbot/templates/chatbot/chat.html -->
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -15,7 +14,7 @@
     <script>
         function sendMessage() {
             const userInput = document.getElementById("user-input").value;
-            document.getElementById("user-input").value = '';  // Clear input field
+            document.getElementById("user-input").value = ''; 
 
             const chatLog = document.getElementById("chat-log");
             chatLog.innerHTML += `<div>User: ${userInput}</div>`;
