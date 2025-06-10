@@ -36,6 +36,7 @@ jobs:
         key: ${{ secrets.EC2_SSH_KEY }}
         script: |
           cd MindedHealth
+          echo "${{ secrets.DOTENV_CONTENT }}" > k8/.env 
           docker pull ${{ secrets.DOCKER_USERNAME }}/mindedhealth:latest
           cd k8
           docker-compose down
