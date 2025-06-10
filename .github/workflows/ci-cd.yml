@@ -37,5 +37,6 @@ jobs:
         script: |
           cd MindedHealth
           docker pull ${{ secrets.DOCKER_USERNAME }}/mindedhealth:latest
-          docker compose down
-          docker compose up -d --build
+          docker-compose down
+          docker-compose up -d --build
+
