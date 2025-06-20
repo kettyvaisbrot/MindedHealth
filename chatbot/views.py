@@ -6,30 +6,28 @@ from .ai_chatbot import (
     generate_ai_response,
 )
 from django.shortcuts import render
+from chatbot.services.chatbot_service import get_ai_chat_response
+from django.contrib.auth.decorators import login_required
 
-
-@csrf_exempt  # This decorator is necessary for allowing POST requests without CSRF protection for now
+@csrf_exempt
 def chatbot_response(request):
-    if request.method == "POST":
-        try:
-            # Parse the incoming request data
-            data = json.loads(request.body)  # Get the JSON payload
-            user_input = data.get(
-                "user_input", ""
-            )  # Extract the user input from the payload
+    if request.method != "POST":
+        return JsonResponse({"error": "Method not allowed"}, status=405)
 
-            if not user_input:
-                return JsonResponse({"error": "User input is required"}, status=400)
+    try:
+        data = json.loads(request.body)
+        user_input = data.get("user_input", "")
 
-            # Get the response from OpenAI
-            ai_response = generate_ai_response(user_input)
+        response = get_ai_chat_response(user_input)
+        return JsonResponse({"response": response}, status=200)
 
-            # Return the AI's response in JSON format
-            return JsonResponse({"response": ai_response}, status=200)
+    except ValueError as ve:
+        return JsonResponse({"error": str(ve)}, status=400)
 
-        except Exception as e:
-            return JsonResponse({"error": str(e)}, status=400)
+    except Exception as e:
+        return JsonResponse({"error": f"Internal server error: {str(e)}"}, status=500)
 
 
+@login_required
 def chatbot_page(request):
     return render(request, "chatbot/chat.html")
