@@ -1,4 +1,4 @@
-# MindedHealth
+# MindedHealth1
 
 MindedHealth is a mental health tracking and management application. It helps users document various aspects of their mental health, such as sleep, exercise, food intake, meetings, and more. The app provides insights and AI-powered recommendations based on the user's data. Additionally, it features anonymous chat for communication and the option for family members to track and support their loved ones' mental health journey.
 
