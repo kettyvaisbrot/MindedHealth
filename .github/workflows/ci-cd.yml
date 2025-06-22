@@ -34,20 +34,24 @@ jobs:
         username: ${{ secrets.EC2_USER }}
         key: ${{ secrets.EC2_SSH_KEY }}
         script: |
-          set -e  # Stop the script if any command fails
+          set -e
           cd MindedHealth
 
           echo "${{ secrets.DOTENV_CONTENT }}" > k8/.env 
 
-          echo "Stopping and removing existing containers and network..."
+          echo "Stopping containers..."
           docker compose -f k8/docker-compose.yml down --volumes --remove-orphans || true
 
-          echo "Cleaning up dangling containers and networks..."
+          echo "Killing any process using port 8000..."
+          sudo fuser -k 8000/tcp || true
+
+          echo "Cleaning up dangling containers/networks..."
           docker container prune -f || true
           docker network prune -f || true
 
-          echo "Pulling latest image from Docker Hub..."
+          echo "Pulling latest image..."
           docker pull ${{ secrets.DOCKER_USERNAME }}/mindedhealth:latest
 
           echo "Starting new deployment..."
           docker compose -f k8/docker-compose.yml up -d --build
+
