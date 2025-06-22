@@ -112,7 +112,6 @@
     </div>
 
     <script>
-        // Use the `is_authenticated` variable to conditionally start timers
         const isAuthenticated = {{ is_authenticated|yesno:"true,false" }};
 
         let warningTimer, logoutTimer;
@@ -149,14 +148,14 @@
             // Function to log out the user automatically
             function logoutUser() {
                 fetch(logoutUrl, {
-                    method: 'POST', // Ensure this is a POST request
+                    method: 'POST', 
                     headers: {
-                        'X-CSRFToken': getCookie('csrftoken'), // Add CSRF token
+                        'X-CSRFToken': getCookie('csrftoken'), 
                     }
                 })
                 .then(response => {
                     if (response.redirected) {
-                        window.location.href = response.url; // Redirect after logout
+                        window.location.href = response.url; 
                     }
                 })
                 .catch(error => console.error('Logout error:', error));

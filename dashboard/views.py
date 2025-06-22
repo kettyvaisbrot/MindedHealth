@@ -1,7 +1,6 @@
 from drf_yasg.utils import swagger_auto_schema
 from django.shortcuts import render, get_object_or_404
 from django.http import JsonResponse, HttpResponseRedirect
-from django.views import View
 import datetime
 import json
 import requests
@@ -27,6 +26,8 @@ from medications.models import MedicationLog, Medication
 from medications.serializers import MedicationLogSerializer
 from django.views.generic import View
 from django.contrib.auth.mixins import LoginRequiredMixin
+from dashboard.services.dashboard_service import fetch_dashboard_logs
+from dashboard.utils.date_utils import parse_date_from_str
 from .services.documentation_service import fetch_documentation_for_date
 from .services.medication_service import log_medication_entry
 from .services.medication_service import (
@@ -67,44 +68,31 @@ from .services.seizure_service import (
     delete_seizure_log,
 )
 
-
+@login_required
 def dashboard_home(request):
     date_str = request.GET.get("date", "")
-    today = timezone.now().date().strftime("%Y-%m-%d")
-    # Check if date is provided and valid
+    today = timezone.now().date()
+    context = {"today": today.strftime("%Y-%m-%d")}
+
     if not date_str:
         messages.warning(request, "Date is required before displaying data.")
-        return render(request, "dashboard/dashboard.html")
-    # Validate date format
-    try:
-        date = datetime.strptime(date_str, "%Y-%m-%d").date()
-    except ValueError:
+        return render(request, "dashboard/dashboard.html", context)
+
+    date = parse_date_from_str(date_str)
+    if not date:
         messages.warning(request, "Invalid date format. Please use YYYY-MM-DD.")
-        return render(request, "dashboard/dashboard.html")
+        return render(request, "dashboard/dashboard.html", context)
 
-    # If date is valid, proceed to query logs
-    context = {}
-    food_logs = FoodLog.objects.filter(user=request.user, date=date)
-    sport_logs = SportLog.objects.filter(user=request.user, date=date)
-    sleeping_logs = SleepingLog.objects.filter(user=request.user, date=date)
-    meetings_logs = Meetings.objects.filter(user=request.user, date=date)
-    seizure_logs = SeizureLog.objects.filter(user=request.user, date=date)
-    medication_logs = MedicationLog.objects.filter(
-        user=request.user, date=date
-    ).select_related("medication")
+    logs = fetch_dashboard_logs(request.user, date)
 
-    # Populate context with data
-    context["date"] = date
-    context["today"] = today
-    context["food_logs"] = food_logs
-    context["sport_logs"] = sport_logs
-    context["sleeping_logs"] = sleeping_logs
-    context["meetings_logs"] = meetings_logs
-    context["seizure_logs"] = seizure_logs
-    context["is_current_date"] = date == timezone.now().date()
-    context["medication_logs"] = medication_logs
-    context["sport_choices"] = SportLog.SPORT_CHOICES
-    context["meeting_type_choices"] = Meetings.MEETING_TYPES_CHOICES
+    context.update({
+        "date": date,
+        "is_current_date": date == today,
+        **logs,
+        "sport_choices": SportLog.SPORT_CHOICES,
+        "meeting_type_choices": Meetings.MEETING_TYPES_CHOICES,
+    })
+
     return render(request, "dashboard/dashboard.html", context)
 
 

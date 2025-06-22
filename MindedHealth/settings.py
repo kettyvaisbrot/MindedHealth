@@ -94,7 +94,6 @@ MIDDLEWARE = [
 
 LOGOUT_REDIRECT_URL = "/"  # Redirect to home page after logout
 ROOT_URLCONF = "MindedHealth.urls"
-# Set session timeout to 2 minutes
 SESSION_COOKIE_AGE = 120  # Time in seconds (2 minutes)
 SESSION_EXPIRE_AT_BROWSER_CLOSE = True
 SESSION_ENGINE = "django.contrib.sessions.backends.cache"
