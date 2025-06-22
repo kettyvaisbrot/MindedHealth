@@ -45,6 +45,9 @@ jobs:
           echo "Killing any process using port 8000..."
           sudo fuser -k 8000/tcp || true
 
+          echo "Waiting for port 8000 to be released..."
+          sleep 5
+
           echo "Cleaning up dangling containers/networks..."
           docker container prune -f || true
           docker network prune -f || true
@@ -54,4 +57,3 @@ jobs:
 
           echo "Starting new deployment..."
           docker compose -f k8/docker-compose.yml up -d --build
-
