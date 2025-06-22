@@ -39,7 +39,7 @@ class SportLog(models.Model):
         max_length=10, choices=SPORT_CHOICES, null=True, blank=True
     )
     other_sport = models.CharField(max_length=100, null=True, blank=True)
-    sport_time = models.TimeField(default="00:00:00")  # New field for sport time
+    sport_time = models.TimeField(default="00:00:00")  
 
     def __str__(self):
         if self.sport_time:
@@ -55,9 +55,9 @@ def get_tomorrow_date():
 class SleepingLog(models.Model):
     user = models.ForeignKey(User, on_delete=models.CASCADE)
     date = models.DateField(auto_now_add=True)
-    went_to_sleep_yesterday = models.TimeField(null=True, blank=True)  # NEW NAME
+    went_to_sleep_yesterday = models.TimeField(null=True, blank=True) 
     wake_up_time = models.TimeField(blank=True, null=True)
-    woke_up_during_night = models.BooleanField(default=False)  # Add this line
+    woke_up_during_night = models.BooleanField(default=False)  
 
     def __str__(self):
         return f"{self.date} - Sleep Time: {self.went_to_sleep_yesterday } - Wake Up Time: {self.wake_up_time}"
