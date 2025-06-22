@@ -1,7 +1,8 @@
 from dashboard.models import (
     FoodLog, SportLog, SleepingLog, Meetings,
-    SeizureLog, MedicationLog
+    SeizureLog
 )
+from medications.models import MedicationLog
 from django.utils import timezone
 
 def fetch_dashboard_logs(user, date):
