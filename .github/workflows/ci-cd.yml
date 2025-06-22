@@ -42,8 +42,9 @@ jobs:
           echo "Stopping containers..."
           docker compose -f k8/docker-compose.yml down --volumes --remove-orphans || true
 
-          echo "Killing any process using port 8000..."
-          sudo fuser -k 8000/tcp || true
+          echo "Forcefully killing processes using port 8000..."
+          sudo lsof -t -i tcp:8000 | xargs -r sudo kill -9 || true
+          sleep 5
 
           echo "Waiting for port 8000 to be released..."
           sleep 5
