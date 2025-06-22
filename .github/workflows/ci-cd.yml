@@ -24,7 +24,6 @@ jobs:
     - name: Build Docker image
       run: docker build -t ${{ secrets.DOCKER_USERNAME }}/mindedhealth:latest -f k8/Dockerfile .
 
-
     - name: Push Docker image
       run: docker push ${{ secrets.DOCKER_USERNAME }}/mindedhealth:latest
 
@@ -35,11 +34,20 @@ jobs:
         username: ${{ secrets.EC2_USER }}
         key: ${{ secrets.EC2_SSH_KEY }}
         script: |
+          set -e  # Stop the script if any command fails
           cd MindedHealth
+
           echo "${{ secrets.DOTENV_CONTENT }}" > k8/.env 
+
+          echo "Stopping and removing existing containers and network..."
+          docker compose -f k8/docker-compose.yml down --volumes --remove-orphans || true
+
+          echo "Cleaning up dangling containers and networks..."
+          docker container prune -f || true
+          docker network prune -f || true
+
+          echo "Pulling latest image from Docker Hub..."
           docker pull ${{ secrets.DOCKER_USERNAME }}/mindedhealth:latest
-          cd k8
-          docker-compose down --volumes --remove-orphans
-          docker-compose up -d --build
 
-
+          echo "Starting new deployment..."
+          docker compose -f k8/docker-compose.yml up -d --build
