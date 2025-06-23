@@ -123,11 +123,11 @@ WSGI_APPLICATION = "MindedHealth.wsgi.application"
 DATABASES = {
     'default': {
         'ENGINE': 'django.db.backends.postgresql',
-        'NAME': 'mindedhealth',  
-        'USER': 'mindeduser',
-        'PASSWORD': 'mindedpassword',  # <-- Make sure this matches exactly
-        'HOST': 'localhost',
-        'PORT': '5432',
+        'NAME': os.getenv('DB_NAME', 'mindedhealth'),
+        'USER': os.getenv('DB_USER', 'mindeduser'),
+        'PASSWORD': os.getenv('DB_PASSWORD', ''),
+        'HOST': os.getenv('DB_HOST', 'localhost'),
+        'PORT': os.getenv('DB_PORT', '5432'),
     }
 }
 
