@@ -1,6 +1,5 @@
 FROM python:3.9-slim
 
-
 ENV PYTHONUNBUFFERED 1
 ENV PYTHONDONTWRITEBYTECODE 1
 
@@ -18,7 +17,7 @@ RUN pip install gunicorn
 
 
 COPY . /app/
-
+COPY .env .env
 
 EXPOSE 8000
 
