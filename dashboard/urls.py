@@ -8,6 +8,7 @@ app_name = "dashboard"
 
 urlpatterns = [
     path("", views.dashboard_home, name="dashboard_home"),
+    path("<str:date>/", views.dashboard_home, name="dashboard_home_with_date"),
     path("api/food/", views.FoodLogAPIView.as_view(), name="food_log_api"),
     path("api/food/<str:date>/", views.FoodLogAPIView.as_view(), name="food_log_api"),
     path("api/sport/", views.SportLogAPIView.as_view(), name="sport_log_api"),
@@ -35,6 +36,9 @@ urlpatterns = [
         name="seizure_logs_api",
     ),
     path("log_medication/<str:date>/", views.log_medication, name="log_medication"),
+    path(
+        "dashboard/<str:date>/", views.dashboard_home, name="dashboard_home_with_date"
+    ),
     path("keep-alive/", views.keep_alive, name="keep_alive"),
     path("logout/", auth_views.LogoutView.as_view(), name="logout"),
 ]
