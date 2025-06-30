@@ -32,7 +32,7 @@ def gather_statistics_for_user(user, year, month):
     meeting_stats = get_meeting_statistics(user, year, month)
     seizure_stats = get_seizure_statistics(user, year, month)
     seizure_stats_with_events = get_seizure_statistics_with_previous_event(user, year, month)
-    medication_statistics = get_medication_statistics(user, month, year)
+    medication_statistics = get_medication_statistics(user, year, month)
 
     days_in_month = calendar.monthrange(year, month)[1]
     sleep_durations = {}
