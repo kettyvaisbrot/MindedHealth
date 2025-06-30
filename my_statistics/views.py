@@ -18,6 +18,8 @@ from my_statistics.services.event_service import get_previous_event as service_g
 from my_statistics.services.seizure_statistics_service import fetch_seizure_data_with_previous_event
 from my_statistics.services.statistics_service import fetch_medication_statistics
 from django.http import HttpResponseServerError
+import traceback
+from django.http import HttpResponse
 
 
 def gather_statistics_for_user(user, year, month):
@@ -80,29 +82,27 @@ def keep_alive(request):
 
 @login_required
 def statistics_view(request):
-    now = datetime.now()
-
-    # Get selected year and month from query params, fallback to current
     selected_month = request.GET.get("month")
     selected_year = request.GET.get("year")
 
+    now = datetime.now()
+    if not selected_month or not selected_year:
+        selected_month = now.month
+        selected_year = now.year
+
     try:
-        selected_month = int(selected_month) if selected_month else now.month
-        selected_year = int(selected_year) if selected_year else now.year
+        selected_month = int(selected_month)
+        selected_year = int(selected_year)
 
-        # Safety guards
-        if selected_month < 1 or selected_month > 12:
-            selected_month = now.month
+        if not (1 <= selected_month <= 12):
+            raise ValueError(f"Invalid month: {selected_month}")
 
-        if selected_year < 1900 or selected_year > now.year:
-            selected_year = now.year
-
-        # Gather stats and render
         context = gather_statistics_for_user(request.user, selected_year, selected_month)
         return render(request, "my_statistics/statistics.html", context)
-
-    except Exception as e:
-        return HttpResponseServerError("Something went wrong: " + str(e))
+    except Exception:
+        return HttpResponse(
+            "<pre>" + traceback.format_exc() + "</pre>", content_type="text/html"
+        )
 
 
 
