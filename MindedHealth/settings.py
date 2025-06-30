@@ -123,10 +123,10 @@ WSGI_APPLICATION = "MindedHealth.wsgi.application"
 DATABASES = {
     'default': {
         'ENGINE': 'django.db.backends.postgresql',
-        'NAME': os.getenv('DB_NAME', 'mindedhealth'),
+        'NAME': os.getenv('DB_NAME', 'mindedhealth-db'),
         'USER': os.getenv('DB_USER', 'mindeduser'),
         'PASSWORD': os.getenv('DB_PASSWORD', ''),
-        'HOST': os.getenv('DB_HOST', 'localhost'),
+        'HOST': os.getenv('DB_HOST', 'localhost'),  # Will be overridden in production
         'PORT': os.getenv('DB_PORT', '5432'),
     }
 }

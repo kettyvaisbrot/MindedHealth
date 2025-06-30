@@ -17,7 +17,8 @@ from my_statistics.services.statistics_service import compute_seizure_statistics
 from my_statistics.services.event_service import get_previous_event as service_get_previous_event
 from my_statistics.services.seizure_statistics_service import fetch_seizure_data_with_previous_event
 from my_statistics.services.statistics_service import get_medication_statistics
-
+from django.http import HttpResponseServerError
+import traceback
 
 def gather_statistics_for_user(user, year, month):
     breakfast_stats = get_avg_meal_time(user, year, month, "breakfast")
@@ -90,9 +91,14 @@ def statistics_view(request):
     selected_month = int(selected_month)
     selected_year = int(selected_year)
 
-    context = gather_statistics_for_user(request.user, selected_year, selected_month)
+    try:
+        context = gather_statistics_for_user(request.user, selected_year, selected_month)
+        return render(request, "my_statistics/statistics.html", context)
 
-    return render(request, "my_statistics/statistics.html", context)
+    except Exception as e:
+        print("==== ERROR in statistics_view ====")
+        traceback.print_exc()
+        return HttpResponseServerError("An error occurred while generating statistics.")
 
 
 
