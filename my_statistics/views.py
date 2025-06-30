@@ -80,19 +80,27 @@ def keep_alive(request):
 
 @login_required
 def statistics_view(request):
+    now = datetime.now()
+
+    # Get selected year and month from query params, fallback to current
     selected_month = request.GET.get("month")
     selected_year = request.GET.get("year")
 
-    if not selected_month or not selected_year:
-        now = datetime.now()
-        selected_month = now.month
-        selected_year = now.year
-
-    selected_month = int(selected_month)
-    selected_year = int(selected_year)
     try:
+        selected_month = int(selected_month) if selected_month else now.month
+        selected_year = int(selected_year) if selected_year else now.year
+
+        # Safety guards
+        if selected_month < 1 or selected_month > 12:
+            selected_month = now.month
+
+        if selected_year < 1900 or selected_year > now.year:
+            selected_year = now.year
+
+        # Gather stats and render
         context = gather_statistics_for_user(request.user, selected_year, selected_month)
         return render(request, "my_statistics/statistics.html", context)
+
     except Exception as e:
         return HttpResponseServerError("Something went wrong: " + str(e))
 
