@@ -16,7 +16,7 @@ from my_statistics.services.statistics_service import get_meeting_statistics_ser
 from my_statistics.services.statistics_service import compute_seizure_statistics
 from my_statistics.services.event_service import get_previous_event as service_get_previous_event
 from my_statistics.services.seizure_statistics_service import fetch_seizure_data_with_previous_event
-from my_statistics.services.statistics_service import get_medication_statistics
+from my_statistics.services.statistics_service import fetch_medication_statistics
 from django.http import HttpResponseServerError
 
 
@@ -129,4 +129,4 @@ def get_seizure_statistics_with_previous_event(user, year, month):
     return fetch_seizure_data_with_previous_event(user, year, month)
 
 def get_medication_statistics(user, year, month):
-    return get_medication_statistics(user, year, month)
+    return fetch_medication_statistics(user, year, month)

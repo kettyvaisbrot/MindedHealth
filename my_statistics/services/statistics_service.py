@@ -111,7 +111,7 @@ def compute_seizure_statistics(user, year, month):
         "avg_seizure_duration": avg_seizure_duration,
     }
 
-def get_medication_statistics(user, year, month):
+def fetch_medication_statistics(user, year, month):
     first_day_of_month = datetime(year, month, 1).date()
 
     if year == datetime.now().year and month == datetime.now().month:
