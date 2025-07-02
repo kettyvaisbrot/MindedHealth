@@ -39,11 +39,10 @@ jobs:
         key: ${{ secrets.EC2_SSH_KEY }}
         script: |
           set -e
-
           cd /home/ec2-user/MindedHealth
-          echo "Pulling latest code from GitHub..."
-          git reset --hard
-          git pull origin main
+
+          echo "Creating prod.env file from GitHub secret..."
+          echo "${{ secrets.PROD_ENV_FILE }}" > /home/ec2-user/MindedHealth/prod.env
 
           echo "Stopping containers..."
           docker compose -f k8/docker-compose.yml down --volumes --remove-orphans || true
@@ -67,3 +66,4 @@ jobs:
 
           echo "Starting new deployment..."
           docker compose -f k8/docker-compose.yml up -d --build
+
