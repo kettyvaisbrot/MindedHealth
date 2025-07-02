@@ -15,7 +15,7 @@ services:
     ports:
       - "8000:8000"
     env_file:
-      - /home/ec2-user/MindedHealth/.env.prod
+      - /home/ec2-user/MindedHealth/.prod.env
     depends_on:
       - redis
     command:
