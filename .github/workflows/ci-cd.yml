@@ -22,10 +22,12 @@ jobs:
         password: ${{ secrets.DOCKER_PASSWORD }}
 
     - name: Build Docker image
-      run: docker build \
-        -t ${{ secrets.DOCKER_USERNAME }}/mindedhealth:latest \
-        -f k8/Dockerfile \
-        .
+      run: |
+        docker build \
+          -t ${{ secrets.DOCKER_USERNAME }}/mindedhealth:latest \
+          -f k8/Dockerfile \
+          .
+
 
 
 
