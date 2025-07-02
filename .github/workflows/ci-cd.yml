@@ -28,10 +28,6 @@ jobs:
           -f k8/Dockerfile \
           .
 
-
-
-
-
     - name: Push Docker image
       run: docker push ${{ secrets.DOCKER_USERNAME }}/mindedhealth:latest
 
@@ -43,7 +39,11 @@ jobs:
         key: ${{ secrets.EC2_SSH_KEY }}
         script: |
           set -e
-          cd MindedHealth
+
+          cd /home/ec2-user/MindedHealth
+          echo "Pulling latest code from GitHub..."
+          git reset --hard
+          git pull origin main
 
           echo "Stopping containers..."
           docker compose -f k8/docker-compose.yml down --volumes --remove-orphans || true
