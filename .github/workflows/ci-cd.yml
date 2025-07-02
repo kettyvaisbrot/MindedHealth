@@ -48,6 +48,9 @@ jobs:
           echo "Stopping containers..."
           docker compose -f k8/docker-compose.yml down --volumes --remove-orphans || true
 
+          echo "Removing existing app container if still running..."
+          docker rm -f mindedhealth_app || true
+
           echo "Forcefully killing processes using port 8000..."
           sudo lsof -t -i tcp:8000 | xargs -r sudo kill -9 || true
           sleep 5
