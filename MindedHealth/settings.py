@@ -131,7 +131,7 @@ if 'test' in sys.argv:
             'NAME': os.getenv('POSTGRES_DB', 'test_mindedhealth'),
             'USER': os.getenv('POSTGRES_USER', 'testuser'),
             'PASSWORD': os.getenv('POSTGRES_PASSWORD', 'testpass'),
-            'HOST': os.getenv('POSTGRES_HOST', 'localhost'),
+            'HOST': os.getenv('POSTGRES_HOST', 'postgres'),
             'PORT': os.getenv('POSTGRES_PORT', '5432'),
         }
     }
