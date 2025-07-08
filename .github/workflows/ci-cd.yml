@@ -17,6 +17,10 @@ jobs:
           POSTGRES_PASSWORD: testpass
         ports:
           - 5432:5432
+      redis:
+        image: redis:6
+        ports:
+          - 6379:6379
 
     steps:
     - name: Checkout code
