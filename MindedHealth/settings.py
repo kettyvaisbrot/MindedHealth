@@ -125,14 +125,14 @@ import sys
 
 # If running tests, use the temporary test DB
 if any(arg in sys.argv for arg in ['test', 'test_coverage', 'pytest']):
-    print("TEST DB HOST:", os.getenv('POSTGRES_HOST'))
+    print("Using test database")
     DATABASES = {
         'default': {
             'ENGINE': 'django.db.backends.postgresql',
             'NAME': os.getenv('POSTGRES_DB', 'test_mindedhealth'),
             'USER': os.getenv('POSTGRES_USER', 'testuser'),
             'PASSWORD': os.getenv('POSTGRES_PASSWORD', 'testpass'),
-            'HOST': 'postgres',
+            'HOST': os.getenv('POSTGRES_HOST', 'postgres'),
             'PORT': os.getenv('POSTGRES_PORT', '5432'),
         }
     }
