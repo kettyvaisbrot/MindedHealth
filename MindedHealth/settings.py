@@ -131,7 +131,7 @@ if any(arg in sys.argv for arg in ['test', 'test_coverage', 'pytest']):
             'NAME': os.getenv('POSTGRES_DB', 'test_mindedhealth'),
             'USER': os.getenv('POSTGRES_USER', 'testuser'),
             'PASSWORD': os.getenv('POSTGRES_PASSWORD', 'testpass'),
-            'HOST': os.getenv('POSTGRES_HOST', 'postgres'),
+            'HOST': 'postgres',
             'PORT': os.getenv('POSTGRES_PORT', '5432'),
         }
     }
