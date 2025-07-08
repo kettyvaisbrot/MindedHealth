@@ -7,7 +7,7 @@ on:
 jobs:
   deploy:
     runs-on: ubuntu-latest
-
+    container: python:3.11
     services:
       postgres:
         image: postgres:15
