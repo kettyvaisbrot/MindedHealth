@@ -124,7 +124,7 @@ import os
 import sys
 
 # If running tests, use the temporary test DB
-if 'test' in sys.argv:
+if any(arg in sys.argv for arg in ['test', 'test_coverage', 'pytest']):
     DATABASES = {
         'default': {
             'ENGINE': 'django.db.backends.postgresql',
