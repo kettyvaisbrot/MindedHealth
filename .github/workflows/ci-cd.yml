@@ -50,8 +50,8 @@ jobs:
           echo "Waiting for Postgres..."
           sleep 2
         done
-        python manage.py migrate
-        python manage.py test dashboard
+        python manage.py migrate --settings=MindedHealth.settings
+        python manage.py test dashboard --settings=MindedHealth.settings
 
     - name: Set up Docker
       uses: docker/setup-buildx-action@v3
