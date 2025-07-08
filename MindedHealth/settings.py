@@ -125,6 +125,7 @@ import sys
 
 # If running tests, use the temporary test DB
 if any(arg in sys.argv for arg in ['test', 'test_coverage', 'pytest']):
+    print("TEST DB HOST:", os.getenv('POSTGRES_HOST'))
     DATABASES = {
         'default': {
             'ENGINE': 'django.db.backends.postgresql',
@@ -135,6 +136,7 @@ if any(arg in sys.argv for arg in ['test', 'test_coverage', 'pytest']):
             'PORT': os.getenv('POSTGRES_PORT', '5432'),
         }
     }
+    print("DATABASE HOST in settings:", DATABASES['default']['HOST'])
 else:
     DATABASES = {
         'default': {
