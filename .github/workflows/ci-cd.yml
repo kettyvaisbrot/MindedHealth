@@ -44,6 +44,7 @@ jobs:
         POSTGRES_HOST: localhost
         POSTGRES_PORT: 5432
       run: |
+        echo "POSTGRES_PASSWORD is: $POSTGRES_PASSWORD"
         python manage.py migrate
         python manage.py test dashboard
 
