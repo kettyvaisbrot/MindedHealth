@@ -42,7 +42,7 @@ jobs:
         USE_TEST_DB: true
         DJANGO_SETTINGS_MODULE: MindedHealth.settings
         POSTGRES_DB: test_mindedhealth
-        POSTGRES_USER: testuser
+        POSTGRES_USER: localhost
         POSTGRES_PASSWORD: testpass
         POSTGRES_HOST: postgres
         POSTGRES_PORT: 5432
