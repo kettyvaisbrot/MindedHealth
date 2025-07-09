@@ -37,6 +37,7 @@ jobs:
 
     - name: Run Django tests for dashboard app
       env:
+        USE_TEST_DB: true
         DJANGO_SETTINGS_MODULE: MindedHealth.settings
         POSTGRES_DB: test_mindedhealth
         POSTGRES_USER: testuser
@@ -46,8 +47,6 @@ jobs:
       run: |
         apt-get update
         apt-get install -y netcat-traditional
-        echo "POSTGRES_PASSWORD is: $POSTGRES_PASSWORD"
-        echo "POSTGRES_HOST is: $POSTGRES_HOST"
         for i in {1..10}; do
           nc -z $POSTGRES_HOST $POSTGRES_PORT && echo "Postgres is up" && break
           echo "Waiting for Postgres..."
