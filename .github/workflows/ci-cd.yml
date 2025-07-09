@@ -42,18 +42,19 @@ jobs:
         USE_TEST_DB: true
         DJANGO_SETTINGS_MODULE: MindedHealth.settings
         POSTGRES_DB: test_mindedhealth
-        POSTGRES_USER: localhost
+        POSTGRES_USER: testuser
         POSTGRES_PASSWORD: testpass
-        POSTGRES_HOST: postgres
+        POSTGRES_HOST: postgres        
         POSTGRES_PORT: 5432
       run: |
         sudo apt-get update
         sudo apt-get install -y netcat-traditional
-        for i in {1..10}; do
-          nc -z $POSTGRES_HOST $POSTGRES_PORT && echo "Postgres is up" && break
+        until nc -z -v -w30 $POSTGRES_HOST $POSTGRES_PORT
+        do
           echo "Waiting for Postgres..."
-          sleep 2
+          sleep 1
         done
+        echo "Postgres is up"
         python manage.py migrate --settings=MindedHealth.settings
         python manage.py test dashboard --settings=MindedHealth.settings
 
