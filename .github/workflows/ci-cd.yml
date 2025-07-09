@@ -37,24 +37,21 @@ jobs:
     - name: Download NLTK stopwords
       run: python -m nltk.downloader stopwords
 
-    - name: Run Django tests for dashboard app
+    - name: Wait for Postgres and Run Django Tests
       env:
         USE_TEST_DB: true
         DJANGO_SETTINGS_MODULE: MindedHealth.settings
         POSTGRES_DB: test_mindedhealth
         POSTGRES_USER: testuser
         POSTGRES_PASSWORD: testpass
-        POSTGRES_HOST: postgres        
+        POSTGRES_HOST: localhost
         POSTGRES_PORT: 5432
       run: |
-        sudo apt-get update
-        sudo apt-get install -y netcat-traditional
-        until nc -z -v -w30 $POSTGRES_HOST $POSTGRES_PORT
-        do
+        for i in {1..15}; do
+          nc -z localhost 5432 && echo "Postgres is up" && break
           echo "Waiting for Postgres..."
-          sleep 1
+          sleep 2
         done
-        echo "Postgres is up"
         python manage.py migrate --settings=MindedHealth.settings
         python manage.py test dashboard --settings=MindedHealth.settings
 
