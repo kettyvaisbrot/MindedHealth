@@ -52,7 +52,10 @@ jobs:
           echo "Waiting for Postgres..."
           sleep 2
         done
+        echo "🧩 Running migrations..."
         python manage.py migrate --settings=MindedHealth.settings
+
+        echo "🧪 Running tests..."
         python manage.py test dashboard --settings=MindedHealth.settings
 
     - name: Set up Docker
