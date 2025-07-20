@@ -23,9 +23,11 @@ STATIC_ROOT = os.environ.get('STATIC_ROOT', os.path.join(BASE_DIR, 'staticfiles'
 SECRET_KEY = os.getenv("DJANGO_SECRET_KEY")
 ALLOWED_HOSTS = ["*"]
 
+TIME_ZONE = 'Asia/Jerusalem'
+USE_TZ = True
 
 
-DEBUG = False
+DEBUG = True
 
 # Access environment variables
 GOOGLE_SEARCH_API_KEY = os.getenv("GOOGLE_SEARCH_API_KEY")
@@ -45,7 +47,7 @@ CHANNEL_LAYERS = {
 
 
 
-REDIS_HOST = os.getenv('REDIS_HOST', 'redis')
+REDIS_HOST = os.getenv('REDIS_HOST', 'localhost')
 REDIS_PORT = 6379
 REDIS_URL = f'redis://{REDIS_HOST}:{REDIS_PORT}/0'
 
@@ -99,6 +101,19 @@ SESSION_EXPIRE_AT_BROWSER_CLOSE = True
 SESSION_ENGINE = "django.contrib.sessions.backends.cache"
 SESSION_CACHE_ALIAS = "default"
 
+LOGGING = {
+    'version': 1,
+    'handlers': {
+        'console': {
+            'class': 'logging.StreamHandler',
+        },
+    },
+    'root': {
+        'handlers': ['console'],
+        'level': 'DEBUG',
+    },
+}
+
 TEMPLATES = [
     {
         "BACKEND": "django.template.backends.django.DjangoTemplates",
@@ -122,8 +137,15 @@ WSGI_APPLICATION = "MindedHealth.wsgi.application"
 
 import os
 import sys
-
-if os.getenv("USE_TEST_DB", "false").lower() == "true":
+if os.getenv("USE_LOCAL_DB", "false").lower() == "true":
+    print("🟢 Using local SQLite database")
+    DATABASES = {
+        'default': {
+            'ENGINE': 'django.db.backends.sqlite3',
+            'NAME': BASE_DIR / 'db.sqlite3',
+        }
+    }
+elif os.getenv("USE_TEST_DB", "false").lower() == "true":
     print("✅ Using test database")
     DATABASES = {
         'default': {
@@ -174,11 +196,9 @@ AUTH_PASSWORD_VALIDATORS = [
 
 LANGUAGE_CODE = "en-us"
 
-TIME_ZONE = "UTC"
-
 USE_I18N = True
 
-USE_TZ = True
+
 
 
 # Static files (CSS, JavaScript, Images)

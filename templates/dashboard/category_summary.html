@@ -1,0 +1,54 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>{{ category|capfirst }} Log Summary</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', sans-serif;
+            background-color: #f0f4f8;
+            padding: 40px;
+        }
+        .container {
+            max-width: 600px;
+            margin: auto;
+            background: white;
+            padding: 30px;
+            border-radius: 15px;
+            box-shadow: 0 0 15px rgba(0,0,0,0.1);
+            text-align: center;
+        }
+        h2 {
+            color: #007bff;
+        }
+        .log {
+            margin: 20px 0;
+            font-size: 18px;
+            text-align: left;
+        }
+        button, a.button {
+            margin: 10px;
+            padding: 10px 20px;
+            font-size: 16px;
+            border-radius: 8px;
+            border: none;
+            cursor: pointer;
+            background-color: #007bff;
+            color: white;
+            text-decoration: none;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h2>📋 {{ category|capfirst }} Log for Today</h2>
+        <div class="log">
+            {% for label, value in fields %}
+                <strong>{{ label }}:</strong> {{ value|default:"Not entered" }}<br>
+            {% endfor %}
+        </div>
+        <a href="{% url 'dashboard:category_edit' category=category %}" class="button">✏️ Edit</a>
+        <a href="{% url 'dashboard:dashboard_home' %}" class="button">⬅️ Back</a>
+    </div>
+</body>
+</html>

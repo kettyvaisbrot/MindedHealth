@@ -1,0 +1,146 @@
+{% load static %}
+
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Log {{ category|capfirst }}</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', sans-serif;
+            background-color: #f7f7f7;
+            padding: 40px;
+        }
+        .container {
+            max-width: 600px;
+            margin: auto;
+            background: white;
+            padding: 30px;
+            border-radius: 12px;
+            box-shadow: 0 0 15px rgba(0,0,0,0.1);
+        }
+        .question-block {
+            margin-bottom: 20px;
+        }
+        .question-block p {
+            font-weight: bold;
+        }
+        input, select, textarea {
+            width: 100%;
+            padding: 8px;
+            margin-top: 6px;
+            border: 1px solid #ccc;
+            border-radius: 6px;
+        }
+        button {
+            margin-top: 20px;
+            padding: 10px 20px;
+            background-color: #007bff;
+            border: none;
+            color: white;
+            font-size: 16px;
+            border-radius: 8px;
+            cursor: pointer;
+        }
+        button:hover {
+            background-color: #0056b3;
+        }
+    </style>
+</head>
+<body>
+<div class="container">
+    <h2>👋 Hi! Let's document your {{ category|capfirst }} log.</h2>
+    <div id="chat-area"></div>
+    <button id="start-btn">Start</button>
+</div>
+
+<!-- ✅ JSON-safe encoding of questions -->
+{{ questions|json_script:"questions-data" }}
+
+<script>
+    const questions = JSON.parse(document.getElementById("questions-data").textContent);
+    let currentIndex = 0;
+    const answers = {};
+
+    const chatArea = document.getElementById("chat-area");
+    const startBtn = document.getElementById("start-btn");
+
+    function renderQuestion(index) {
+        const q = questions[index];
+        if (!q) {
+            renderSubmitButton();
+            return;
+        }
+
+        const div = document.createElement("div");
+        div.className = "question-block";
+
+        const p = document.createElement("p");
+        p.innerText = q.question;
+        div.appendChild(p);
+
+        let input;
+        if (q.type === "select") {
+            input = document.createElement("select");
+            input.name = q.field;
+            q.options.forEach(opt => {
+                const option = document.createElement("option");
+                option.value = opt;
+                option.text = opt;
+                input.appendChild(option);
+            });
+        } else if (q.type === "time") {
+            input = document.createElement("input");
+            input.type = "time";
+            input.name = q.field;
+        } else if (q.type === "textarea") {
+            input = document.createElement("textarea");
+            input.name = q.field;
+        } else {
+            input = document.createElement("input");
+            input.name = q.field;
+        }
+
+        input.onchange = () => {
+            answers[q.field] = input.value;
+            currentIndex += 1;
+            renderQuestion(currentIndex);
+        };
+
+        div.appendChild(input);
+        chatArea.appendChild(div);
+        input.focus();
+    }
+
+    function renderSubmitButton() {
+        const btn = document.createElement("button");
+        btn.innerText = "Submit";
+        btn.onclick = submitForm;
+        chatArea.appendChild(btn);
+    }
+
+    function submitForm() {
+        fetch("{% url 'dashboard:category_chat_submit' category=category %}", {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/json",
+                "X-CSRFToken": "{{ csrf_token }}"
+            },
+            body: JSON.stringify(answers)
+        }).then(res => {
+            if (res.ok) {
+                window.location.href = "{% url 'dashboard:dashboard_home' %}";
+            } else {
+                alert("Something went wrong.");
+            }
+        });
+    }
+
+    startBtn.onclick = () => {
+        startBtn.style.display = "none";
+        renderQuestion(currentIndex);
+    };
+</script>
+</body>
+</html>

@@ -12,6 +12,15 @@ class SportLogSerializer(serializers.ModelSerializer):
     class Meta:
         model = SportLog
         fields = "__all__"
+    def validate(self, data):
+        sport_type = data.get('sport_type')
+        other_sport = data.get('other_sport')
+
+        if sport_type == 'other' and not other_sport:
+            raise serializers.ValidationError({
+                'other_sport': 'Please specify the other sport if sport type is "other".'
+            })
+        return data
 
 
 class SleepingLogSerializer(serializers.ModelSerializer):

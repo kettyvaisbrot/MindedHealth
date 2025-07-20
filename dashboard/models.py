@@ -12,11 +12,11 @@ class FoodLog(models.Model):
 
     user = models.ForeignKey(User, on_delete=models.CASCADE)
     date = models.DateField()
-    breakfast_ate = models.BooleanField(default=False)
+    breakfast_ate = models.BooleanField(default=False,null=True, blank=True)
     breakfast_time = models.TimeField(null=True, blank=True)
-    lunch_ate = models.BooleanField(default=False)
+    lunch_ate = models.BooleanField(default=False,null=True, blank=True)
     lunch_time = models.TimeField(null=True, blank=True)
-    dinner_ate = models.BooleanField(default=False)
+    dinner_ate = models.BooleanField(default=False,null=True, blank=True)
     dinner_time = models.TimeField(null=True, blank=True)
 
     def __str__(self):
@@ -39,7 +39,7 @@ class SportLog(models.Model):
         max_length=10, choices=SPORT_CHOICES, null=True, blank=True
     )
     other_sport = models.CharField(max_length=100, null=True, blank=True)
-    sport_time = models.TimeField(default="00:00:00")  
+    sport_time = models.TimeField(default="00:00:00",null=True, blank=True)  
 
     def __str__(self):
         if self.sport_time:
@@ -72,8 +72,8 @@ class Meetings(models.Model):
     ]
     user = models.ForeignKey(User, on_delete=models.CASCADE)
     date = models.DateField()
-    time = models.TimeField()
-    met_people = models.BooleanField(default=False)
+    time = models.TimeField(null=True, blank=True)
+    met_people = models.BooleanField(default=False, null=True, blank=True)
     positivity_rating = models.IntegerField(
         default=1, choices=[(i, str(i)) for i in range(1, 6)]
     )
@@ -93,3 +93,15 @@ class SeizureLog(models.Model):
 
     def __str__(self):
         return f"Seizure at {self.date} {self.time}"
+
+
+class FeltOffLog(models.Model):
+    user = models.ForeignKey(User, on_delete=models.CASCADE)
+    date = models.DateField()
+    had_moment = models.BooleanField(default=False)
+    duration = models.CharField(max_length=100, blank=True, null=True)
+    intensity = models.IntegerField(choices=[(i, str(i)) for i in range(1, 6)], blank=True, null=True)
+    description = models.TextField(blank=True, null=True)
+
+    def __str__(self):
+        return f"{self.user.username} - Felt Off on {self.date}"
