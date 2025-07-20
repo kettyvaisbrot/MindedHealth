@@ -1,0 +1,100 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Edit Medication Log</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', sans-serif;
+            background-color: #f0f4f8;
+            padding: 40px;
+        }
+        .container {
+            max-width: 700px;
+            margin: auto;
+            background: white;
+            padding: 30px;
+            border-radius: 15px;
+            box-shadow: 0 0 15px rgba(0,0,0,0.1);
+        }
+        h2 {
+            color: #007bff;
+            text-align: center;
+        }
+        .med-block {
+            margin-top: 30px;
+            padding: 20px;
+            background: #f8f9fa;
+            border-left: 4px solid #007bff;
+            border-radius: 10px;
+        }
+        .dose {
+            margin-top: 10px;
+            font-size: 16px;
+        }
+        label {
+            display: block;
+            margin-top: 5px;
+            font-weight: 500;
+        }
+        input[type="time"] {
+            padding: 5px;
+            border-radius: 5px;
+            border: 1px solid #ccc;
+            margin-top: 5px;
+        }
+        .buttons {
+            margin-top: 30px;
+            text-align: center;
+        }
+        button, a.button {
+            padding: 10px 20px;
+            margin: 5px;
+            font-size: 16px;
+            border-radius: 8px;
+            background-color: #007bff;
+            color: white;
+            border: none;
+            text-decoration: none;
+        }
+        a.button.secondary {
+            background-color: #6c757d;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h2>✏️ Edit Medication Log</h2>
+
+        <form method="POST" action="{% url 'dashboard:category_update' category=category %}">
+            {% csrf_token %}
+
+            {% for med_id, med_data in med_logs.items %}
+                <div class="med-block">
+                    <strong>{{ med_data.name }}</strong>
+                    {% for dose in med_data.doses %}
+                        <div class="dose">
+                            <label>
+                                Scheduled at {{ dose.scheduled_time|default:"--:--" }} —
+                                Time you took it:
+                                <input
+                                    type="time"
+                                    name="time_{{ med_id }}_{{ dose.dose_index }}"
+                                    value="{{ dose.time_taken|default_if_none:''|time:'H:i' }}"
+                                >
+                            </label>
+                        </div>
+                    {% endfor %}
+                </div>
+            {% endfor %}
+
+
+
+            <div class="buttons">
+                <button type="submit">💾 Save</button>
+                <a href="{% url 'dashboard:dashboard_home' %}" class="button secondary">⬅️ Cancel</a>
+            </div>
+        </form>
+    </div>
+</body>
+</html>

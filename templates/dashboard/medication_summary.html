@@ -1,0 +1,75 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>{{ category|capfirst }} Log Summary</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', sans-serif;
+            background-color: #f0f4f8;
+            padding: 40px;
+        }
+        .container {
+            max-width: 700px;
+            margin: auto;
+            background: white;
+            padding: 30px;
+            border-radius: 15px;
+            box-shadow: 0 0 15px rgba(0,0,0,0.1);
+            text-align: center;
+        }
+        h2 {
+            color: #007bff;
+        }
+        .med-block {
+            text-align: left;
+            margin: 25px 0;
+            padding: 15px;
+            background: #f8f9fa;
+            border-left: 4px solid #007bff;
+            border-radius: 10px;
+        }
+        .dose {
+            margin-left: 10px;
+            font-size: 16px;
+            color: #333;
+        }
+        .buttons {
+            margin-top: 20px;
+        }
+        a.button {
+            display: inline-block;
+            margin: 10px;
+            padding: 10px 20px;
+            font-size: 16px;
+            border-radius: 8px;
+            border: none;
+            background-color: #007bff;
+            color: white;
+            text-decoration: none;
+        }
+        a.button.secondary {
+            background-color: #6c757d;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h2>📋 Medication Log for Today</h2>
+
+        {% for med_name, logs in med_logs.items %}
+            <div class="med-block">
+                <strong>{{ med_name }}</strong>
+                {% for log in logs %}
+                    <div class="dose">• Dose {{ log.dose_index }} — taken at {{ log.time_taken|time:"H:i" }}</div>
+                {% endfor %}
+            </div>
+        {% endfor %}
+
+        <div class="buttons">
+            <a href="{% url 'dashboard:category_edit' category=category %}" class="button">✏️ Edit</a>
+            <a href="{% url 'dashboard:dashboard_home' %}" class="button secondary">⬅️ Back</a>
+        </div>
+    </div>
+</body>
+</html>

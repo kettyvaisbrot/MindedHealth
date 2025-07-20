@@ -9,442 +9,70 @@
     <style>
         body {
             font-family: Arial, sans-serif;
+            background-color: #f7f7f7;
+            padding: 40px;
             margin: 0;
-            padding: 0;
-            background-color: #f4f4f4;
         }
         .container {
-            max-width: 1200px;
+            max-width: 800px;
             margin: 0 auto;
-            padding: 20px;
             background: #fff;
-            border-radius: 8px;
-            box-shadow: 0 0 10px rgba(0,0,0,0.1);
-        }
-        h1, h2, h3 {
-            color: #333;
-        }
-        a {
-            text-decoration: none;
-        }
-        .back-button a, .button {
-            display: inline-block;
-            background-color: #007bff;
-            color: #fff;
-            padding: 10px 20px;
-            margin: 5px;
-            border-radius: 4px;
+            border-radius: 12px;
+            padding: 40px;
+            box-shadow: 0 0 12px rgba(0, 0, 0, 0.1);
             text-align: center;
-            font-size: 16px;
         }
-        .back-button a:hover, .button:hover {
-            background-color: #0056b3;
-        }
-        form {
-            margin-top: 20px;
-        }
-        label {
-            display: block;
-            margin: 10px 0 5px;
-        }
-        input[type="text"],
-        input[type="password"],
-        input[type="email"],
-        input[type="time"],
-        input[type="date"],
-        input[type="number"],
-        select,
-        textarea {
-            padding: 10px;
-            border: 1px solid #ddd;
-            border-radius: 4px;
+        h1 {
+            font-size: 28px;
             margin-bottom: 10px;
-            width: 100%;
-            font-size: 16px;
         }
-        input[type="checkbox"] {
-            margin-right: 10px;
+        p {
+            font-size: 18px;
+            color: #555;
         }
-        button {
+        .category-grid {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 20px;
+            justify-content: center;
+            margin-top: 30px;
+        }
+        .category-button {
             background-color: #007bff;
-            color: #fff;
-            border: none;
-            padding: 10px 20px;
-            border-radius: 4px;
-            cursor: pointer;
-            font-size: 16px;
+            color: white;
+            text-decoration: none;
+            padding: 20px 30px;
+            border-radius: 10px;
+            font-size: 18px;
+            transition: background-color 0.3s ease;
         }
-        button:hover {
+        .category-button:hover {
             background-color: #0056b3;
         }
-        ul {
-            list-style: none;
-            padding: 0;
-        }
-        li {
-            padding: 5px 0;
-            border-bottom: 1px solid #ddd;
-        }
-        .form-container {
-            margin-top: 20px;
+        .back-home {
+            display: block;
+            margin-top: 30px;
+            text-decoration: none;
+            color: #007bff;
         }
     </style>
 </head>
 <body>
     <div class="container">
-        {% if messages %}
-            {% for message in messages %}
-                <div class="alert alert-warning">{{ message }}</div>
-            {% endfor %}
-        {% endif %}
-        <h1>Dashboard</h1>
-        <div class="back-button">
-            <a href="{% url 'home' %}">Back to Home</a>
+        <h1>👋 Hi! How are you today?</h1>
+        <p>What would you like to document?</p>
+
+        <div class="category-grid">
+            <a href="{% url 'dashboard:category_chat' category='sleep' %}" class="category-button">😴 Sleep</a>
+            <a href="{% url 'dashboard:category_chat' category='food' %}" class="category-button">🍽️ Food</a>
+            <a href="{% url 'dashboard:category_chat' category='sport' %}" class="category-button">🏃 Sport</a>
+            <a href="{% url 'dashboard:category_chat' category='meetings' %}" class="category-button">🧑‍🤝‍🧑 Meetings</a>
+            <a href="{% url 'dashboard:category_chat' category='medication' %}" class="category-button">💊 Medication</a>
+            <a href="{% url 'dashboard:category_chat' category='felt_off' %}" class="category-button">🌫️ Moments I Felt Off</a>
+
         </div>
 
-        <form method="GET" action="{% url 'dashboard:dashboard_home' %}">
-            <label for="datePicker">Select Date to see documentation</label>
-            <input type="date" id="datePicker" name="date" value="{% if date %}{{ date }}{% endif %}" max="{{ today }}">
-            <button type="submit">Show Data</button>
-        </form>
-
-
-        {% if date %}
-            {% if food_logs %}
-                <h2>Food Log for {{ date }}</h2>
-                <ul>
-                    {% for log in food_logs %}
-                        <li>
-                            {{ log.date }} - 
-                            Breakfast: {% if log.breakfast_ate %} Ate {% endif %} at {{ log.breakfast_time|default:"No time specified" }}, 
-                            Lunch: {% if log.lunch_ate %} Ate {% endif %} at {{ log.lunch_time|default:"No time specified" }},
-                            Dinner: {% if log.dinner_ate %} Ate {% endif %} at {{ log.dinner_time|default:"No time specified" }}
-                        </li>
-                    {% endfor %}
-                </ul>
-            {% else %}
-                <p>No food data available for {{ date }}</p>
-            {% endif %}
-            {% if medication_logs %}
-                <h2>Medication Log for {{ date }}</h2>
-                <ul>
-                    {% for log in medication_logs %}
-                        <li>
-                            Medication: {{ log.medication.name }} - 
-                            Times Taken: 
-                            {{ log.time_taken|time:"h:i A" }}
-                        </li>
-                    {% endfor %}
-                </ul>
-            {% else %}
-                <p>No medication data available for {{ date }}</p>
-            {% endif %}
-        
-            {% if sport_logs %}
-                <h2>Sport Log for {{ date }}</h2>
-                <ul>
-                    {% for log in sport_logs %}
-                        <li>
-                            {{ log.date }} - 
-                            Did Sport: {% if log.did_sport %} Yes {% else %} No {% endif %}, 
-                            {% if log.did_sport %}
-                                Sport Type: {{ log.get_sport_type_display }}
-                                {% if log.sport_type == 'other' %}
-                                    - Other Sport: {{ log.other_sport }}
-                                {% endif %}
-                                {% if log.sport_time %}
-                                    - Sport Time: {{ log.sport_time|time:"H:i" }}
-                                {% endif %}
-                            {% endif %}
-                        </li>
-                    {% endfor %}
-                </ul>
-            {% else %}
-                <p>No sport data available for {{ date }}</p>
-            {% endif %}
-            {% if sleeping_logs %}
-                <h2>Sleeping Log for {{ date }}</h2>
-                <ul>
-                    {% for log in sleeping_logs %}
-                        <li>
-                            {{ log.date }} - 
-                            Wake Time: {{ log.wake_up_time|time:"H:i" }}, 
-                            went_to_sleep_yesterday: {{ log.went_to_sleep_yesterday |time:"H:i" }}, 
-                            Woke Up During Night: {% if log.woke_up_during_night %}Yes{% else %}No{% endif %}
-                        </li>
-                    {% endfor %}
-                </ul>
-            {% else %}
-                <p>No sleeping data available for {{ date }}</p>
-            {% endif %}
-            {% if meetings_logs %}
-                <h2>Meeting Log for {{ date }}</h2>
-                <ul>
-                    {% for log in meetings_logs %}
-                        {% if log.date|date:"Y-m-d" == date|date:"Y-m-d" %}
-                            <li>
-                                {{ log.date }} - 
-                                Time: {{ log.time|time:"H:i" }}, 
-                                Met People: {% if log.met_people %} Yes {% else %} No {% endif %}, 
-                                Positivity Rating: {{ log.positivity_rating }},
-                                Meeting Type: {{ log.get_meeting_type_display }}
-                            </li>
-                        {% else %}
-                            <li>No meetings logs for {{ date }}</li>
-                        {% endif %}
-                    {% endfor %}
-                </ul>
-            {% else %}
-                <p>No meetings data available for {{ date }}</p>
-            {% endif %}
-            {% if seizure_logs %}
-                <h2>Seizure Log for {{ date }}</h2>
-                <ul>
-                    {% for log in seizure_logs %}
-                        {% if log.date|date:"Y-m-d" == date|date:"Y-m-d" %}
-                            <li>
-                                {{ log.date }} - 
-                                Time: {{ log.time|time:"H:i" }}, 
-                                Duration (minutes): {{ log.duration_minutes }},
-                            </li>
-                        {% else %}
-                            <li>No seizure logs for {{ date }}</li>
-                        {% endif %}
-                    {% endfor %}
-                </ul>
-            {% else %}
-                <p>No seizure data available for {{ date }}</p>
-            {% endif %}
-
-            
-    {%endif%}
-        
-
-    {% if is_current_date %}
-        <form method="POST" action="{% url 'dashboard:food_log_api' %}">
-            {% csrf_token %}
-            <input type="hidden" name="date" value="{{ date|date:'Y-m-d' }}">
-            <input type="hidden" name="user" value="{{ request.user.id }}">
-            <label for="breakfast_ate">Breakfast Ate:</label>
-            <input type="checkbox" id="breakfast_ate" name="breakfast_ate" {% if food_logs and food_logs.0.breakfast_ate %}checked{% endif %}>
-            <br>
-            <label for="breakfast_time">Breakfast Time:</label>
-            <input type="time" id="breakfast_time" name="breakfast_time" value="{% if food_logs %}{{ food_logs.0.breakfast_time|date:'H:i' }}{% endif %}">
-            <br>
-            <label for="lunch_ate">Lunch Ate:</label>
-            <input type="checkbox" id="lunch_ate" name="lunch_ate" {% if food_logs and food_logs.0.lunch_ate %}checked{% endif %}>
-            <br>
-            <label for="lunch_time">Lunch Time:</label>
-            <input type="time" id="lunch_time" name="lunch_time" value="{% if food_logs %}{{ food_logs.0.lunch_time|date:'H:i' }}{% endif %}">
-            <br>
-            <label for="dinner_ate">Dinner Ate:</label>
-            <input type="checkbox" id="dinner_ate" name="dinner_ate" {% if food_logs and food_logs.0.dinner_ate %}checked{% endif %}>
-            <br>
-            <label for="dinner_time">Dinner Time:</label>
-            <input type="time" id="dinner_time" name="dinner_time" value="{% if food_logs %}{{ food_logs.0.dinner_time|date:'H:i' }}{% endif %}">
-            <br>
-            <button type="submit">Save</button>
-        </form>
-        <form method="POST" action="{% url 'dashboard:sport_log_api' date=date %}">
-            {% csrf_token %}
-            <input type="hidden" name="date" value="{{ date|date:'Y-m-d' }}">
-            <input type="hidden" name="user" value="{{ request.user.id }}">
-            <label for="did_sport">Did Sport:</label>
-            <input type="checkbox" id="did_sport" name="did_sport" {% if sport_logs and sport_logs.0.did_sport %}checked{% endif %}>
-            <br>
-            <label for="sport_type">Sport Type:</label>
-            <select id="sport_type" name="sport_type">
-                <option value="" {% if not sport_logs or not sport_logs.0.sport_type %}selected{% endif %}>Select</option>
-                {% for choice_key, choice_value in sport_choices %}
-                    <option value="{{ choice_key }}" {% if sport_logs and sport_logs.0.sport_type == choice_key %}selected{% endif %}>{{ choice_value }}</option>
-                {% endfor %}
-            </select>
-            <br>
-            <label for="other_sport">Other Sport:</label>
-            <input type="text" id="other_sport" name="other_sport" value="{% if sport_logs %}{{ sport_logs.0.other_sport }}{% endif %}">
-            <br>
-            <label for="sport_time">Sport Time:</label>
-            <input type="time" id="sport_time" name="sport_time" value="{% if sport_logs %}{{ sport_logs.0.sport_time|time:"H:i" }}{% endif %}">
-            <br>
-            <button type="submit">Save</button>
-        </form>
-        <form method="POST" action="{% url 'dashboard:sleeping_log_api' %}">
-            {% csrf_token %}
-            <input type="hidden" name="date" value="{{ date|date:'Y-m-d' }}">
-            <input type="hidden" name="user" value="{{ request.user.id }}">
-
-            <label for="wake_up_time">Wake Time:</label>
-            <input type="time" id="wake_up_time" name="wake_up_time" 
-                value="{% if sleeping_logs %}{{ sleeping_logs.0.wake_up_time|time:'H:i' }}{% endif %}">
-            <br>
-
-            <label for="went_to_sleep_yesterday">went_to_sleep_yesterday:</label>
-            <input type="time" id="went_to_sleep_yesterday" name="went_to_sleep_yesterday" 
-                value="{% if sleeping_logs %}{{ sleeping_logs.0.went_to_sleep_yesterday|time:'H:i' }}{% endif %}">
-            <br>
-
-            <label for="woke_up_during_night">Woke Up During Night:</label>
-            <input type="checkbox" id="woke_up_during_night" name="woke_up_during_night" 
-                {% if sleeping_logs and sleeping_logs.0.woke_up_during_night %}checked{% endif %}>
-            <br>
-
-            <button type="submit">Save</button>
-        </form>
-     
-        <form method="POST" action="{% url 'dashboard:meetings_log_api' %}">
-            {% csrf_token %}
-            <input type="hidden" name="date" value="{{ date|date:'Y-m-d' }}">
-            <input type="hidden" name="user" value="{{ request.user.id }}">
-            <label for="time">Time:</label>
-            <input type="time" id="time" name="time" value="{% if meetings_logs %}{{ meetings_logs.0.time|time:'H:i' }}{% endif %}">
-            <br>
-            <label for="met_people">Met People:</label>
-            <input type="checkbox" id="met_people" name="met_people" {% if meetings_logs and meetings_logs.0.met_people %}checked{% endif %}>
-            <br>
-            <label for="positivity_rating">Positivity Rating:</label>
-            <input type="number" id="positivity_rating" name="positivity_rating" min="1" max="5" value="{% if meetings_logs %}{{ meetings_logs.0.positivity_rating }}{% endif %}">
-            <br>
-            <label for="meeting_type">Meeting Type:</label>
-            <select id="meeting_type" name="meeting_type">
-                <option value="" selected disabled>Select</option>
-                {% for key, value in meeting_type_choices %}
-                    <option value="{{ key }}" {% if meetings_logs and meetings_logs.0.meeting_type == key %}selected{% endif %}>{{ value }}</option>
-                {% endfor %}
-            </select>
-            <br>
-            <button type="submit">Save</button>
-        </form>
-        <h2>Document a Seizure</h2>
-        <form method="post" action="{% url 'dashboard:seizure_logs_api' %}">
-            {% csrf_token %}
-            <input type="hidden" name="date" value="{{ date|date:'Y-m-d' }}">
-        
-            <label for="time">Time:</label>
-            <input type="time" id="time" name="time">
-        
-            <label for="duration_minutes">Duration (minutes):</label>
-            <input type="number" id="duration_minutes" name="duration_minutes" min="1" required>
-        
-            <button type="submit">Save Seizure Log</button>
-        </form>
-        
-        <h2>Medication Documentation</h2>
-        <form method="post" action="{% url 'dashboard:log_medication' date=date|date:'Y-m-d' %}">
-            {% csrf_token %}
-            <input type="hidden" name="date" value="{{ date|date:'Y-m-d' }}">
-            
-            <label for="medication">Select Medication:</label>
-            <select name="medication" required>
-                {% for med in request.user.medication_set.all %}
-                    <option value="{{ med.id }}">{{ med.name }}</option>
-                {% endfor %}
-            </select>
-            
-            <label>Times Taken:</label>
-            <div id="time-fields">
-                <input type="time" name="time_taken" required>
-            </div>
-            
-            <button type="button" onclick="addTimeField()">Add Another Time</button>
-            
-            <button type="submit">Log Medication</button>
-        </form>
-        
-        <h3>Logged Medications for {{ date }}:</h3>
-        <ul>
-            {% for log in medication_logs %}
-                <li>{{ log.medication.name }} - {{ log.time_taken }} (Dose {{ log.dose_index }})</li>
-            {% endfor %}
-        </ul>
-    <div id="logoutWarning" style="display: none; position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); padding: 20px; border: 1px solid #ccc; background: #fff; z-index: 1000; text-align: center;">
-        <p>You will be logged out in 30 seconds due to inactivity.</p>
-        <button onclick="stayOnSite()">Stay Logged In</button>
-        <button onclick="logOut()">Log Out</button>
+        <a href="{% url 'home' %}" class="back-home">← Back to Home</a>
     </div>
-
-    <script>
-        let warningTimer;
-
-        function showWarning() {
-            document.getElementById("logoutWarning").style.display = "block";
-        }
-
-        function stayOnSite() {
-            document.getElementById("logoutWarning").style.display = "none";
-            fetch('/keep-alive/', { method: 'GET' })
-                .then(response => console.log('Session extended'))
-                .catch(error => console.error('Error extending session:', error));
-
-            startWarningTimer();
-        }
-
-        function logOut() {
-            window.location.href = '/logout/';
-        }
-
-        function startWarningTimer() {
-            warningTimer = setTimeout(showWarning, 90000); 
-        }
-
-        startWarningTimer();
-    </script>
-
-        <script>
-            function addTimeField() {
-                const timeFields = document.getElementById("time-fields");
-                const newTimeField = document.createElement("input");
-                newTimeField.type = "time";
-                newTimeField.name = "time_taken";
-                newTimeField.required = true;
-                timeFields.appendChild(newTimeField);
-            }
-        </script>
-        
-                 
-    {% endif %}
-    <script>
-        let timeoutDuration = 120000; 
-        let logoutUrl = "/logout/";
-
-        function resetTimeout() {
-            clearTimeout(logoutTimer);
-            logoutTimer = setTimeout(logoutUser, timeoutDuration);
-        }
-
-        function logoutUser() {
-            fetch(logoutUrl, {
-                method: 'POST',
-                headers: {
-                    'X-CSRFToken': getCookie('csrftoken'), 
-                }
-            })
-            .then(response => {
-                if (response.redirected) {
-                    window.location.href = response.url;
-                }
-            })
-            .catch(error => console.error('Logout error:', error));
-        }
-
-        function getCookie(name) {
-            let cookieValue = null;
-            if (document.cookie && document.cookie !== '') {
-                const cookies = document.cookie.split(';');
-                for (let i = 0; i < cookies.length; i++) {
-                    const cookie = cookies[i].trim();
-                    if (cookie.substring(0, name.length + 1) === (name + '=')) {
-                        cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
-                        break;
-                    }
-                }
-            }
-            return cookieValue;
-        }
-
-        let logoutTimer = setTimeout(logoutUser, timeoutDuration);
-        document.addEventListener('mousemove', resetTimeout);
-        document.addEventListener('keypress', resetTimeout);
-    </script>
-    
 </body>
 </html>
