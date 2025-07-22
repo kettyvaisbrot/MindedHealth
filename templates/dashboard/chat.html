@@ -1,30 +1,43 @@
-{% load static %}
-
-
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
+    <meta charset="UTF-8" />
     <title>Log {{ category|capfirst }}</title>
     <style>
         body {
             font-family: 'Segoe UI', sans-serif;
             background-color: #f7f7f7;
-            padding: 40px;
+            padding: 2rem;
         }
-        .container {
+        .chat-container {
             max-width: 600px;
             margin: auto;
             background: white;
-            padding: 30px;
-            border-radius: 12px;
-            box-shadow: 0 0 15px rgba(0,0,0,0.1);
+            padding: 2rem;
+            border-radius: 10px;
+            box-shadow: 0 0 10px rgba(0,0,0,0.1);
         }
-        .question-block {
-            margin-bottom: 20px;
-        }
-        .question-block p {
+        .question {
+            margin: 1rem 0;
             font-weight: bold;
+        }
+        .hidden {
+            display: none;
+        }
+        button {
+            background-color: #4CAF50;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 5px;
+            cursor: pointer;
+            margin-top: 1rem;
+        }
+        button:hover {
+            background-color: #45a049;
+        }
+        .answer-options {
+            margin-top: 0.5rem;
         }
         input, select, textarea {
             width: 100%;
@@ -32,115 +45,154 @@
             margin-top: 6px;
             border: 1px solid #ccc;
             border-radius: 6px;
-        }
-        button {
-            margin-top: 20px;
-            padding: 10px 20px;
-            background-color: #007bff;
-            border: none;
-            color: white;
-            font-size: 16px;
-            border-radius: 8px;
-            cursor: pointer;
-        }
-        button:hover {
-            background-color: #0056b3;
+            box-sizing: border-box;
         }
     </style>
 </head>
 <body>
-<div class="container">
-    <h2>👋 Hi! Let's document your {{ category|capfirst }} log.</h2>
-    <div id="chat-area"></div>
-    <button id="start-btn">Start</button>
+<div class="chat-container">
+    <h2>Log {{ category|capfirst }}</h2>
+
+    <div id="start-section">
+        <button id="start-btn">Start</button>
+    </div>
+
+    <form id="chat-form" class="hidden" method="POST" action="{% url 'dashboard:category_chat_submit' category=category %}">
+        {% csrf_token %}
+        <div id="question-box"></div>
+        <div class="answer-options" id="answer-options"></div>
+    </form>
 </div>
 
-<!-- ✅ JSON-safe encoding of questions -->
+<!-- JSON Data -->
 {{ questions|json_script:"questions-data" }}
 
 <script>
-    const questions = JSON.parse(document.getElementById("questions-data").textContent);
-    let currentIndex = 0;
+    const questions = JSON.parse(document.getElementById('questions-data').textContent);
+    let currentQuestionIndex = 0;
     const answers = {};
 
-    const chatArea = document.getElementById("chat-area");
     const startBtn = document.getElementById("start-btn");
+    const startSection = document.getElementById("start-section");
+    const chatForm = document.getElementById("chat-form");
+    const questionBox = document.getElementById("question-box");
+    const answerOptions = document.getElementById("answer-options");
 
-    function renderQuestion(index) {
-        const q = questions[index];
-        if (!q) {
-            renderSubmitButton();
-            return;
+    startBtn.addEventListener("click", () => {
+        startSection.classList.add("hidden");    // Hide start button section
+        chatForm.classList.remove("hidden");     // Show chat form section
+        showNextQuestion();
+    });
+    function showNextQuestion() {
+        // Loop until we find a question that passes condition (or run out)
+        while (currentQuestionIndex < questions.length) {
+            const q = questions[currentQuestionIndex];
+
+            // ✅ Check condition if exists
+            if (q.condition) {
+                const prevAnswer = answers[q.condition.field];
+                if (prevAnswer !== q.condition.value) {
+                    currentQuestionIndex++; // Skip this question
+                    continue;
+                }
+            }
+
+            // Show current valid question
+            questionBox.innerHTML = `<div class="question">${q.question}</div>`;
+            answerOptions.innerHTML = "";
+
+            if (q.type === "boolean" || q.type === "bool") {
+                const yesBtn = document.createElement("button");
+                yesBtn.type = "button";
+                yesBtn.textContent = "Yes";
+                yesBtn.onclick = () => handleAnswer(q.field, "yes");
+
+                const noBtn = document.createElement("button");
+                noBtn.type = "button";
+                noBtn.textContent = "No";
+                noBtn.onclick = () => handleAnswer(q.field, "no");
+
+                answerOptions.appendChild(yesBtn);
+                answerOptions.appendChild(noBtn);
+
+            } else if (q.type === "select" && Array.isArray(q.options)) {
+                q.options.forEach(option => {
+                    const btn = document.createElement("button");
+                    btn.type = "button";
+                    btn.textContent = option;
+                    btn.onclick = () => handleAnswer(q.field, option);
+                    answerOptions.appendChild(btn);
+                });
+
+            } else {
+                const input = document.createElement("input");
+                input.type = "text";
+                input.placeholder = "Enter your answer";
+                input.id = "answer-input";
+
+                const submitBtn = document.createElement("button");
+                submitBtn.type = "button";
+                submitBtn.textContent = "Submit";
+                submitBtn.onclick = () => {
+                    if (!input.value.trim()) {
+                        alert("Please enter an answer");
+                        return;
+                    }
+                    handleAnswer(q.field, input.value.trim());
+                };
+
+                answerOptions.appendChild(input);
+                answerOptions.appendChild(submitBtn);
+            }
+
+            return; // Stop here to wait for user interaction
         }
 
-        const div = document.createElement("div");
-        div.className = "question-block";
+        // ✅ All questions done
+        questionBox.innerHTML = "<p>✅ All done!</p>";
+        answerOptions.innerHTML = "";
+        submitAnswers();
+    }
 
-        const p = document.createElement("p");
-        p.innerText = q.question;
-        div.appendChild(p);
 
-        let input;
-        if (q.type === "select") {
-            input = document.createElement("select");
-            input.name = q.field;
-            q.options.forEach(opt => {
-                const option = document.createElement("option");
-                option.value = opt;
-                option.text = opt;
-                input.appendChild(option);
-            });
-        } else if (q.type === "time") {
-            input = document.createElement("input");
-            input.type = "time";
-            input.name = q.field;
-        } else if (q.type === "textarea") {
-            input = document.createElement("textarea");
-            input.name = q.field;
-        } else {
-            input = document.createElement("input");
-            input.name = q.field;
+
+    function handleAnswer(field, answer) {
+        answers[field] = answer;
+        currentQuestionIndex++;
+        showNextQuestion();
+    }
+
+    function getCSRFToken() {
+        const cookies = document.cookie.split(';');
+        for (let cookie of cookies) {
+            cookie = cookie.trim();
+            if (cookie.startsWith('csrftoken=')) {
+                return decodeURIComponent(cookie.substring('csrftoken='.length));
+            }
         }
-
-        input.onchange = () => {
-            answers[q.field] = input.value;
-            currentIndex += 1;
-            renderQuestion(currentIndex);
-        };
-
-        div.appendChild(input);
-        chatArea.appendChild(div);
-        input.focus();
+        return null;
     }
 
-    function renderSubmitButton() {
-        const btn = document.createElement("button");
-        btn.innerText = "Submit";
-        btn.onclick = submitForm;
-        chatArea.appendChild(btn);
-    }
-
-    function submitForm() {
+    function submitAnswers() {
         fetch("{% url 'dashboard:category_chat_submit' category=category %}", {
             method: "POST",
             headers: {
                 "Content-Type": "application/json",
-                "X-CSRFToken": "{{ csrf_token }}"
+                "X-CSRFToken": getCSRFToken(),
             },
             body: JSON.stringify(answers)
-        }).then(res => {
-            if (res.ok) {
+        })
+        .then(response => {
+            if (response.ok) {
+                alert("Log saved successfully!");
                 window.location.href = "{% url 'dashboard:dashboard_home' %}";
             } else {
-                alert("Something went wrong.");
+                alert("Error saving log.");
             }
-        });
+        })
+        .catch(() => alert("Error sending data to server."));
     }
-
-    startBtn.onclick = () => {
-        startBtn.style.display = "none";
-        renderQuestion(currentIndex);
-    };
 </script>
+
 </body>
 </html>

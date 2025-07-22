@@ -1,0 +1,18 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Delete Medication</title>
+</head>
+<body>
+  <h1>Delete Medication</h1>
+
+  <p>Are you sure you want to delete "<strong>{{ medication.name }}</strong>"?</p>
+
+  <form method="post">
+    {% csrf_token %}
+    <button type="submit">✅ Yes, Delete</button>
+    <a href="{% url 'medications:medication_list' %}">❌ Cancel</a>
+  </form>
+</body>
+</html>

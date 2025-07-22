@@ -1,82 +1,49 @@
-from django.http import JsonResponse
-from django.shortcuts import render, redirect, get_object_or_404
-from django.contrib.auth.decorators import login_required
+from rest_framework import viewsets, permissions, status
+from rest_framework.decorators import action
+from rest_framework.response import Response
+from django.shortcuts import get_object_or_404
+from .serializers import MedicationSerializer
 from .models import Medication
-from .services import (
-    create_medication,
-    update_medication,
-    delete_medication,
-    log_medication,
-)
+from .services import log_medication_service, delete_medication
+from django.contrib.auth.decorators import login_required
+from django.shortcuts import render
 
 
 @login_required
-def medication_list(request):
-    """Display a list of medications for the logged-in user."""
-    medications = Medication.objects.filter(user=request.user)
-    return render(request, "medications/medications.html", {"medications": medications})
+def medications_page(request):
+    return render(request, "medications/medications_page.html")
 
 
-@login_required
-def add_medication(request):
-    """Add a new medication."""
-    if request.method == "POST":
-        create_medication(
+class MedicationViewSet(viewsets.ModelViewSet):
+    serializer_class = MedicationSerializer
+    permission_classes = [permissions.IsAuthenticated]
+
+    def get_queryset(self):
+        return Medication.objects.filter(user=self.request.user)
+
+    def perform_create(self, serializer):
+        serializer.save(user=self.request.user)
+
+    def perform_update(self, serializer):
+        serializer.save(user=self.request.user)
+
+    def perform_destroy(self, instance):
+        delete_medication(instance)
+
+
+
+    @action(detail=False, methods=['post'], url_path='log')
+    def log_medication(self, request):
+        serializer = LogMedicationSerializer(data=request.data, context={"request": request})
+        serializer.is_valid(raise_exception=True)
+
+        log_medication_service(
             user=request.user,
-            name=request.POST.get("name"),
-            dose=request.POST.get("dose"),
-            times_per_day=request.POST.get("times_per_day"),
-            dose_times=request.POST.getlist("dose_times"),
+            medication_id=serializer.validated_data["medication_id"],
+            date=serializer.validated_data["date"],
+            time_taken=serializer.validated_data["time_taken"],
+            dose_index=serializer.validated_data["dose_index"],
         )
-        return redirect("medications:medication_list")
 
-    return render(request, "medications/add_medication.html")
+        return Response({"detail": "Medication logged successfully"}, status=status.HTTP_201_CREATED)
 
-
-@login_required
-def edit_medication(request, pk):
-    """Edit an existing medication."""
-    medication = get_object_or_404(Medication, pk=pk, user=request.user)
-
-    if request.method == "POST":
-        update_medication(
-            medication=medication,
-            name=request.POST.get("name"),
-            dose=request.POST.get("dose"),
-            times_per_day=request.POST.get("times_per_day"),
-            dose_times=request.POST.getlist("dose_times"),
-        )
-        return redirect("medications:medication_list")
-
-    return render(
-        request, "medications/edit_medication.html", {"medication": medication}
-    )
-
-
-@login_required
-def delete_medication(request, pk):
-    """Delete a medication."""
-    medication = get_object_or_404(Medication, pk=pk, user=request.user)
-    delete_medication(medication)
-    return redirect("medications:medication_list")
-
-
-@login_required
-def log_medication(request):
-    """Log the medication taken."""
-    if request.method == "POST":
-        medication = get_object_or_404(Medication, pk=request.POST.get("medication_id"), user=request.user)
-        log_medication(
-            user=request.user,
-            medication=medication,
-            date=request.POST.get("date"),
-            time_taken=request.POST.get("time_taken"),
-            dose_index=request.POST.get("dose_index"),
-        )
-        return redirect("medications:medication_list")
-
-    return render(request, "medications/log_medication.html")
-
-
-def keep_alive(request):
-    return JsonResponse({"status": "success"})

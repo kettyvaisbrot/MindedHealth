@@ -1,23 +1,13 @@
-# medications/urls.py
-from django.urls import path
-from .views import (
-    medication_list,
-    add_medication,
-    edit_medication,
-    delete_medication,
-    log_medication,
-    keep_alive,
-)
-from django.contrib.auth import views as auth_views
+from django.urls import path, include
+from rest_framework import routers
+from .views import MedicationViewSet, medications_page
+
+router = routers.DefaultRouter()
+router.register(r'medications', MedicationViewSet, basename='medication')
 
 app_name = "medications"
 
 urlpatterns = [
-    path("", medication_list, name="medication_list"),
-    path("add/", add_medication, name="add_medication"),
-    path("edit/<int:pk>/", edit_medication, name="edit_medication"),
-    path("delete/<int:pk>/", delete_medication, name="delete_medication"),
-    path("log/", log_medication, name="log_medication"),
-    path("logout/", auth_views.LogoutView.as_view(), name="logout"),
-    path("keep-alive/", keep_alive, name="keep_alive"),
+    path('', medications_page, name='medications_page'),   
+    path('api/', include(router.urls)),                   
 ]

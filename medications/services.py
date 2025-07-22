@@ -1,24 +1,6 @@
 from .models import Medication, MedicationLog
+from django.shortcuts import get_object_or_404
 
-
-def create_medication(user, name, dose, times_per_day, dose_times):
-    medication = Medication.objects.create(
-        user=user,
-        name=name,
-        dose=dose,
-        times_per_day=times_per_day,
-        dose_times=dose_times,
-    )
-    return medication
-
-
-def update_medication(medication, name, dose, times_per_day, dose_times):
-    medication.name = name
-    medication.dose = dose
-    medication.times_per_day = times_per_day
-    medication.dose_times = dose_times
-    medication.save()
-    return medication
 
 
 def delete_medication(medication):
@@ -34,3 +16,16 @@ def log_medication(user, medication, date, time_taken, dose_index):
         dose_index=dose_index,
     )
     return log
+
+def log_medication_service(user, medication_id, date, time_taken, dose_index):
+    medication = get_object_or_404(Medication, pk=medication_id, user=user)
+    
+    # Call your actual logging function (e.g. saving MedicationLog or similar)
+    log_medication(
+        user=user,
+        medication=medication,
+        date=date,
+        time_taken=time_taken,
+        dose_index=dose_index,
+    )
+
