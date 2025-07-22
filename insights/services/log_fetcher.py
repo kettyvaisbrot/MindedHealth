@@ -1,6 +1,6 @@
 from datetime import timedelta
 from django.utils import timezone
-from dashboard.models import FoodLog, SportLog, SleepingLog, Meetings, SeizureLog
+from dashboard.models import FoodLog, SportLog, SleepingLog, Meetings, FeltOffLog
 from medications.models import MedicationLog
 
 def fetch_user_logs(user):
@@ -12,7 +12,7 @@ def fetch_user_logs(user):
         "sport": SportLog.objects.filter(user=user, date__range=(week_ago, today)),
         "sleep": SleepingLog.objects.filter(user=user, date__range=(week_ago, today)),
         "meetings": Meetings.objects.filter(user=user, date__range=(week_ago, today)),
-        "seizures": SeizureLog.objects.filter(user=user, date__range=(week_ago, today)),
+        "felt_off": FeltOffLog.objects.filter(user=user, date__range=(week_ago, today)),
         "medications": MedicationLog.objects.filter(user=user, date__range=(week_ago, today)).select_related("medication"),
     }
 
