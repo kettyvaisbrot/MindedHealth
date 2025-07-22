@@ -1,6 +1,10 @@
 from django.urls import path
-from .views import ai_insights_view
+from .views import AIInsightsAPIView, insights_page_view
+
+app_name = "insights" 
+
 
 urlpatterns = [
-    path("", ai_insights_view, name="ai_insight"),
+    path('api/insights/', AIInsightsAPIView.as_view(), name='ai_insight_api'),
+    path('', insights_page_view, name='ai_insight_page'),
 ]

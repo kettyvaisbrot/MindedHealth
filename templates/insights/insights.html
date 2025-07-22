@@ -56,8 +56,8 @@
 
     <h1>Your AI Insight</h1>
 
-    <div class="insight-box">
-        {{ insights|linebreaks }}
+    <div class="insight-box" id="insight-box">
+        Loading insights...
     </div>
     
     <a href="{% url 'home' %}">
@@ -67,6 +67,30 @@
     <div class="footer">
         Powered by MindedHealth AI Assistant
     </div>
+
+    <script>
+        // Fetch insights from the API and render them
+        fetch("/insights/api/insights/", {
+            headers: {
+                "X-Requested-With": "XMLHttpRequest",
+                "Accept": "application/json"
+            }
+        })
+        .then(response => {
+            if (!response.ok) {
+                throw new Error(`HTTP error! status: ${response.status}`);
+            }
+            return response.json();
+        })
+        .then(data => {
+            const box = document.getElementById("insight-box");
+            box.innerHTML = data.insights.replace(/\n/g, "<br>");
+        })
+        .catch(error => {
+            document.getElementById("insight-box").innerText = "An error occurred while fetching insights.";
+            console.error("Error fetching insights:", error);
+        });
+    </script>
 
 </body>
 </html>
