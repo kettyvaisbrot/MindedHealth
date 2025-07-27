@@ -21,18 +21,17 @@ from . import views
 from rest_framework import permissions
 from drf_yasg.views import get_schema_view
 from drf_yasg import openapi
+from rest_framework.permissions import AllowAny
+from rest_framework.authtoken.views import obtain_auth_token
 
 schema_view = get_schema_view(
    openapi.Info(
-      title="MindedHealth API",
+      title="Your API",
       default_version='v1',
-      description="API documentation for MindedHealth",
-      terms_of_service="https://www.google.com/policies/terms/",
-      contact=openapi.Contact(email="support@mindedhealth.com"),
-      license=openapi.License(name="MIT License"),
+      description="API documentation",
    ),
    public=True,
-   permission_classes=(permissions.AllowAny,),
+   permission_classes=(AllowAny,),
 )
 
 urlpatterns = [
@@ -52,16 +51,8 @@ urlpatterns = [
     path("keep-alive/", views.keep_alive, name="keep_alive"),
     path("chat/<str:room_name>/", views.room, name="chat_room"),
     path("chatbot/", include("chatbot.urls")),
-    re_path(
-        r"^swagger(?P<format>\.json|\.yaml)$",
-        schema_view.without_ui(cache_timeout=0),
-        name="schema-json",
-    ),
-    path(
-        "swagger/",
-        schema_view.with_ui("swagger", cache_timeout=0),
-        name="schema-swagger-ui",
-    ),
-    path("redoc/", schema_view.with_ui("redoc", cache_timeout=0), name="schema-redoc"),
+    path('swagger/', schema_view.with_ui('swagger', cache_timeout=0), name='schema-swagger-ui'),
     path("insights/", include("insights.urls")),
+    path("api-token-auth/", obtain_auth_token, name="api_token_auth"),
+
 ]

@@ -37,18 +37,73 @@
             color: white;
             text-decoration: none;
         }
+        .loading {
+            color: #888;
+            font-style: italic;
+        }
+        .error {
+            color: red;
+        }
     </style>
 </head>
 <body>
     <div class="container">
-        <h2>📋 {{ category|capfirst }} Log for Today</h2>
-        <div class="log">
-            {% for label, value in fields %}
-                <strong>{{ label }}:</strong> {{ value|default:"Not entered" }}<br>
-            {% endfor %}
+        <h2>📋 <span id="categoryTitle">{{ category|capfirst }}</span> Log for Today</h2>
+        <div id="logContainer" class="log">
+            <p class="loading">Loading...</p>
         </div>
-        <a href="{% url 'dashboard:category_edit' category=category %}" class="button">✏️ Edit</a>
+        <a id="editLink" href="{% url 'dashboard:category_edit' category=category %}" class="button" style="display:none;">✏️ Edit</a>
         <a href="{% url 'dashboard:dashboard_home' %}" class="button">⬅️ Back</a>
     </div>
+    <script>
+        document.addEventListener("DOMContentLoaded", () => {
+            const category = "{{ category }}";
+            const logContainer = document.getElementById("logContainer");
+            const editLink = document.getElementById("editLink");
+            console.log("Fetching summary from:", `/dashboard/api/log/${category}/summary/`);
+            fetch(`/dashboard/api/log/${category}/summary/`, {
+                headers: {
+                    'X-Requested-With': 'XMLHttpRequest'
+                },
+                credentials: 'include'
+            })
+            .then(response => {
+                if (response.status === 302) {
+                    return response.json().then(data => {
+                        window.location.href = data.redirect;
+                    });
+                } else if (!response.ok) {
+                    throw new Error("Something went wrong while loading the data.");
+                }
+                return response.json();
+            })
+            .then(data => {
+                logContainer.innerHTML = ""; // Clear loading
+
+                if (category === "medication") {
+                    data.medications.forEach(item => {
+                        const p = document.createElement("p");
+                        p.innerHTML = `<strong>${item.name}</strong><br>
+                                    Scheduled: ${item.scheduled_time || "N/A"}<br>
+                                    Taken: ${item.taken_time || "Not recorded"}<br><br>`;
+                        logContainer.appendChild(p);
+                    });
+                } else {
+                    data.fields.forEach(item => {
+                        const p = document.createElement("p");
+                        p.innerHTML = `<strong>${item.label}:</strong> ${item.value || "Not entered"}`;
+                        logContainer.appendChild(p);
+                    });
+                }
+
+                editLink.href = `/dashboard/log/${category}/edit/`;
+                editLink.style.display = "inline-block";
+            })
+            .catch(err => {
+                logContainer.innerHTML = `<p class="error">❌ ${err.message}</p>`;
+            });
+        });
+    </script>
+
 </body>
 </html>
