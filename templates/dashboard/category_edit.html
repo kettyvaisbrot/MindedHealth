@@ -1,9 +1,10 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
+    <meta charset="UTF-8" />
     <title>Edit {{ category|capfirst }} Log</title>
     <style>
+        /* Your CSS styles here (keep as is) */
         body {
             font-family: 'Segoe UI', sans-serif;
             background-color: #f0f4f8;
@@ -41,16 +42,26 @@
             border-radius: 8px;
             cursor: pointer;
         }
+        .error {
+            color: red;
+            margin-top: 10px;
+        }
+        .success {
+            color: green;
+            margin-top: 10px;
+        }
     </style>
 </head>
 <body>
     <div class="form-container">
         <h2>✏️ Edit Your {{ category|capfirst }} Log</h2>
-        <form method="post" action="{% url 'dashboard:category_update' category=category %}">
+        <form method="post" action="{% url 'dashboard:category_edit' category=category %}">
             {% csrf_token %}
             {{ form.as_p }}
             <button type="submit">✅ Save</button>
         </form>
+        <a href="{% url 'dashboard:dashboard_home' %}" class="discard-button">❌ Discard</a>
+
     </div>
 </body>
 </html>

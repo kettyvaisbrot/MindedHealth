@@ -66,7 +66,7 @@
     <div class="container">
         <h2>✏️ Edit Medication Log</h2>
 
-        <form method="POST" action="{% url 'dashboard:category_update' category=category %}">
+        <form method="POST" action="{% url 'dashboard:category_edit' category=category %}">
             {% csrf_token %}
 
             {% for med_id, med_data in med_logs.items %}

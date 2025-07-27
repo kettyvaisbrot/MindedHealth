@@ -56,20 +56,62 @@
 <body>
     <div class="container">
         <h2>📋 Medication Log for Today</h2>
-
-        {% for med_name, logs in med_logs.items %}
-            <div class="med-block">
-                <strong>{{ med_name }}</strong>
-                {% for log in logs %}
-                    <div class="dose">• Dose {{ log.dose_index }} — taken at {{ log.time_taken|time:"H:i" }}</div>
-                {% endfor %}
-            </div>
-        {% endfor %}
+        <div id="med-logs-container">
+            Loading medication logs...
+        </div>
 
         <div class="buttons">
             <a href="{% url 'dashboard:category_edit' category=category %}" class="button">✏️ Edit</a>
             <a href="{% url 'dashboard:dashboard_home' %}" class="button secondary">⬅️ Back</a>
         </div>
     </div>
+
+    <script>
+        async function fetchMedicationLogs() {
+            try {
+                const response = await fetch('/api/log/medication/summary/', {
+                    headers: {
+                        'Accept': 'application/json',
+                        'X-CSRFToken': '{{ csrf_token }}', // only if needed for auth
+                    },
+                    credentials: 'include', // send cookies for auth if needed
+                });
+                if (!response.ok) throw new Error('Failed to fetch medication logs');
+
+                const data = await response.json();
+
+                const container = document.getElementById('med-logs-container');
+                container.innerHTML = '';
+
+                if (data.med_logs && Object.keys(data.med_logs).length > 0) {
+                    for (const [medName, logs] of Object.entries(data.med_logs)) {
+                        const medBlock = document.createElement('div');
+                        medBlock.className = 'med-block';
+
+                        const title = document.createElement('strong');
+                        title.textContent = medName;
+                        medBlock.appendChild(title);
+
+                        logs.forEach(log => {
+                            const doseDiv = document.createElement('div');
+                            doseDiv.className = 'dose';
+                            const timeTaken = log.time_taken ? new Date(log.time_taken).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'}) : 'N/A';
+                            doseDiv.textContent = `• Dose ${log.dose_index} — taken at ${timeTaken}`;
+                            medBlock.appendChild(doseDiv);
+                        });
+
+                        container.appendChild(medBlock);
+                    }
+                } else {
+                    container.textContent = 'No medication logs found for today.';
+                }
+            } catch (error) {
+                document.getElementById('med-logs-container').textContent = 'Error loading medication logs.';
+                console.error(error);
+            }
+        }
+
+        fetchMedicationLogs();
+    </script>
 </body>
 </html>

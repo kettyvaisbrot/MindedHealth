@@ -43,12 +43,13 @@
         <h2>👋 Hi again!</h2>
         <p>You already documented your <strong>{{ category }}</strong> today.</p>
         <p>Would you like to update it?</p>
-        <form action="{% url 'dashboard:category_chat_force' category=category %}" method="get" style="display:inline;">
-            <button class="btn-update" type="submit">📝 Update my log</button>
+        <form action="{% url 'dashboard:category_summary' category=category %}" method="get">
+            <button type="submit" class="button">Update my log</button>
         </form>
         <a href="{% url 'dashboard:dashboard_home' %}">
             <button class="btn-cancel">⬅️ Back to Dashboard</button>
         </a>
     </div>
+
 </body>
 </html>

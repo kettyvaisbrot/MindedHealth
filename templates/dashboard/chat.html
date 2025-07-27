@@ -57,18 +57,15 @@
         <button id="start-btn">Start</button>
     </div>
 
-    <form id="chat-form" class="hidden" method="POST" action="{% url 'dashboard:category_chat_submit' category=category %}">
+    <form id="chat-form" class="hidden" method="POST">
         {% csrf_token %}
         <div id="question-box"></div>
         <div class="answer-options" id="answer-options"></div>
     </form>
 </div>
 
-<!-- JSON Data -->
-{{ questions|json_script:"questions-data" }}
-
 <script>
-    const questions = JSON.parse(document.getElementById('questions-data').textContent);
+    let questions = [];
     let currentQuestionIndex = 0;
     const answers = {};
 
@@ -78,26 +75,57 @@
     const questionBox = document.getElementById("question-box");
     const answerOptions = document.getElementById("answer-options");
 
+    const urlParams = new URLSearchParams(window.location.search);
+    const force = urlParams.get("force") === "true";
+    const edit = urlParams.get("edit") === "true";
+
     startBtn.addEventListener("click", () => {
-        startSection.classList.add("hidden");    // Hide start button section
-        chatForm.classList.remove("hidden");     // Show chat form section
-        showNextQuestion();
+        startSection.classList.add("hidden");
+        chatForm.classList.remove("hidden");
+        fetchQuestions().then(() => showNextQuestion());
     });
+
+    async function fetchQuestions() {
+        const category = "{{ category }}";
+        let fetchUrl = `/dashboard/api/chat/${category}/?`;
+        if (force) fetchUrl += "force=true&";
+        if (edit) fetchUrl += "edit=true";
+
+        try {
+            const response = await fetch(fetchUrl);
+            if (!response.ok) {
+                throw new Error(`HTTP error! status: ${response.status}`);
+            }
+            const data = await response.json();
+
+            if (data.questions) {
+                questions = data.questions;
+            } else if (data.summary) {
+                alert("✅ You've already logged medication today.");
+                window.location.href = "{% url 'dashboard:dashboard_home' %}";
+            } else if (data.message) {
+                alert("✅ Log already exists.");
+                window.location.href = "{% url 'dashboard:dashboard_home' %}";
+            } else {
+                alert("⚠️ No questions found.");
+            }
+        } catch (error) {
+            alert("⚠️ Error fetching questions: " + error.message);
+        }
+    }
+
     function showNextQuestion() {
-        // Loop until we find a question that passes condition (or run out)
         while (currentQuestionIndex < questions.length) {
             const q = questions[currentQuestionIndex];
 
-            // ✅ Check condition if exists
             if (q.condition) {
                 const prevAnswer = answers[q.condition.field];
                 if (prevAnswer !== q.condition.value) {
-                    currentQuestionIndex++; // Skip this question
+                    currentQuestionIndex++;
                     continue;
                 }
             }
 
-            // Show current valid question
             questionBox.innerHTML = `<div class="question">${q.question}</div>`;
             answerOptions.innerHTML = "";
 
@@ -145,20 +173,33 @@
                 answerOptions.appendChild(submitBtn);
             }
 
-            return; // Stop here to wait for user interaction
+            return;
         }
 
-        // ✅ All questions done
         questionBox.innerHTML = "<p>✅ All done!</p>";
         answerOptions.innerHTML = "";
         submitAnswers();
     }
 
-
-
     function handleAnswer(field, answer) {
         answers[field] = answer;
-        currentQuestionIndex++;
+
+        const currentQuestion = questions[currentQuestionIndex];
+        let next = currentQuestionIndex + 1;
+
+        if (currentQuestion.next_if && currentQuestion.next_if[answer] !== undefined) {
+            next = currentQuestion.next_if[answer];
+
+            if (next === "end") {
+                window.location.href = "/dashboard/"; // or your desired end route
+                return;
+            }
+
+            // Convert to integer in case it's a string number like "4"
+            next = parseInt(next, 10);
+        }
+
+        currentQuestionIndex = next;
         showNextQuestion();
     }
 
@@ -174,7 +215,8 @@
     }
 
     function submitAnswers() {
-        fetch("{% url 'dashboard:category_chat_submit' category=category %}", {
+        const category = "{{ category }}";
+        fetch(`/dashboard/log/${category}/chat/submit/`, {
             method: "POST",
             headers: {
                 "Content-Type": "application/json",
@@ -184,13 +226,16 @@
         })
         .then(response => {
             if (response.ok) {
-                alert("Log saved successfully!");
+                alert("✅ Log saved successfully!");
                 window.location.href = "{% url 'dashboard:dashboard_home' %}";
             } else {
-                alert("Error saving log.");
+                return response.json().then(data => {
+                    const errorMsg = data?.error || "❌ Error saving log.";
+                    alert(errorMsg);
+                });
             }
         })
-        .catch(() => alert("Error sending data to server."));
+        .catch(() => alert("❌ Error sending data to server."));
     }
 </script>
 
