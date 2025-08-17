@@ -3,15 +3,34 @@ from .models import FoodLog, SportLog, SleepingLog, Meetings, SeizureLog
 
 
 class FoodLogSerializer(serializers.ModelSerializer):
+    user = serializers.HiddenField(default=serializers.CurrentUserDefault())
+
     class Meta:
         model = FoodLog
-        fields = "__all__"
+        fields = [
+            "date",
+            "breakfast_ate",
+            "breakfast_time",
+            "lunch_ate",
+            "lunch_time",
+            "dinner_ate",
+            "dinner_time",
+        ]
 
 
 class SportLogSerializer(serializers.ModelSerializer):
+    user = serializers.HiddenField(default=serializers.CurrentUserDefault())
+
     class Meta:
         model = SportLog
-        fields = "__all__"
+        fields = [
+            "date",
+            "did_sport",
+            "sport_type",
+            "other_sport",
+            "sport_time",
+        ]
+
     def validate(self, data):
         sport_type = data.get('sport_type')
         other_sport = data.get('other_sport')
@@ -24,6 +43,7 @@ class SportLogSerializer(serializers.ModelSerializer):
 
 
 class SleepingLogSerializer(serializers.ModelSerializer):
+    user = serializers.HiddenField(default=serializers.CurrentUserDefault())
     went_to_sleep_yesterday = serializers.TimeField(
         required=False, allow_null=True, default=None
     )
@@ -31,16 +51,26 @@ class SleepingLogSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = SleepingLog
-        fields = ["went_to_sleep_yesterday", "wake_up_time"]
+        fields = [
+            "went_to_sleep_yesterday",
+            "wake_up_time",
+        ]
 
 
 class MeetingsSerializer(serializers.ModelSerializer):
+    user = serializers.HiddenField(default=serializers.CurrentUserDefault())
+
+    positivity_rating = serializers.IntegerField(min_value=1, max_value=5)
+
     class Meta:
         model = Meetings
-        fields = "__all__"
-
-
-from .models import SeizureLog
+        fields = [
+            "date",
+            "time",
+            "met_people",
+            "positivity_rating",
+            "meeting_type",
+        ]
 
 
 class SeizureLogSerializer(serializers.ModelSerializer):
@@ -48,4 +78,8 @@ class SeizureLogSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = SeizureLog
-        fields = ["user", "date", "time", "duration_minutes"]
+        fields = [
+            "date",
+            "time",
+            "duration_minutes",
+        ]

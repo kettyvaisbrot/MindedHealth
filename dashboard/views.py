@@ -1,30 +1,34 @@
 from dashboard.category_config import CATEGORY_CONFIG
 from django.utils.timezone import localtime, now as tz_now
 from drf_yasg.utils import swagger_auto_schema
-from django.shortcuts import render
-from django.http import JsonResponse
 import datetime
 from django.db.models import BooleanField
-from django.utils.timezone import localtime as tz_localtime
 from django.forms import modelform_factory
 from django.contrib.auth.decorators import login_required
 from rest_framework.views import APIView
 from rest_framework.response import Response
-from django.urls import reverse
-from rest_framework.permissions import IsAuthenticated
 from medications.models import MedicationLog, Medication
 from django.views.generic import View
 from django.contrib.auth.mixins import LoginRequiredMixin
 from .services.documentation_service import fetch_documentation_for_date
 from .services.medication_service import log_medication_entry
 from .services.questions_service import get_medication_questions
-from django.contrib.auth.decorators import login_required
-from django.shortcuts import render
 from drf_yasg import openapi
+from django.shortcuts import render, redirect, get_object_or_404
+from django.utils.timezone import localtime, now
+from django.http import HttpResponseNotFound, JsonResponse
+from django.utils.decorators import method_decorator
+from datetime import datetime
+
+
+def get_bool_query_param(request, param_name):
+    val = request.GET.get(param_name)
+    return str(val).lower() in ("true", "1", "yes")
 
 
 class CategorySummaryView(APIView):
-    permission_classes = [IsAuthenticated]
+    permission_classes = []
+
     @swagger_auto_schema(
         operation_description="Get a summary of today's data for a given category (e.g., sleep, food, exercise). "
                               "Returns the documented fields if data exists, otherwise redirects to chat page.",
@@ -93,24 +97,21 @@ def category_summary_page(request, category):
         template_name = 'dashboard/medication_summary.html'
     else:
         template_name = 'dashboard/category_summary.html'
-    
+
     return render(request, template_name, {'category': category})
 
-from django.shortcuts import render, redirect, get_object_or_404
-from django.utils.timezone import localtime, now
-from django.forms import modelform_factory
-from django.http import HttpResponseNotFound
-from django.contrib.auth.decorators import login_required
-from django.utils.decorators import method_decorator
-from rest_framework.views import APIView
-from medications.models import Medication, MedicationLog
-from dashboard.category_config import CATEGORY_CONFIG
-from datetime import datetime
 
 @method_decorator(login_required, name='dispatch')
 class CategoryEditView(APIView):
     permission_classes = []
 
+    @swagger_auto_schema(
+        operation_description="Retrieve editable log data for a specific category (e.g., sleep, mood) for today.",
+        manual_parameters=[
+            openapi.Parameter('category', openapi.IN_PATH, description="Log category", type=openapi.TYPE_STRING),
+        ],
+        responses={200: 'Success', 404: 'Not Found'}
+    )
     def get(self, request, category):
         today = localtime(now()).date()
 
@@ -210,12 +211,8 @@ class CategoryEditView(APIView):
         })
 
 
-
-import logging
-
-logger = logging.getLogger(__name__)
 class CategoryChatView(APIView):
-    permission_classes = [IsAuthenticated]
+    permission_classes = []
 
     @swagger_auto_schema(
         operation_description="""
@@ -255,8 +252,8 @@ class CategoryChatView(APIView):
     )
     def get(self, request, category):
         today = localtime(tz_now()).date()
-        force = request.query_params.get("force") == "true"
-        edit = request.query_params.get("edit") == "true"
+        force = get_bool_query_param(request, "force")
+        edit = get_bool_query_param(request, "edit")
 
         if category == "medication":
             logs = MedicationLog.objects.filter(user=request.user, date=today).select_related("medication")
@@ -313,12 +310,11 @@ class CategoryChatView(APIView):
         })
 
 
-
 @login_required
 def chat_page(request, category):
     user = request.user
     today = localtime(tz_now()).date()
-    force = request.GET.get("force") == "true"
+    force = get_bool_query_param(request, "force")
 
     config = CATEGORY_CONFIG.get(category)
     if not config:
@@ -340,7 +336,8 @@ def chat_page(request, category):
 
 
 class CategoryChatSubmitView(APIView):
-    permission_classes = [IsAuthenticated]
+    permission_classes = []
+
     @swagger_auto_schema(
         operation_description="Get summary data for a category",
         manual_parameters=[
@@ -379,7 +376,52 @@ class CategoryChatSubmitView(APIView):
             "category": category,
             "start_chat": True,
         })
-    
+
+    @swagger_auto_schema(
+        operation_description="""
+        Submit chat data for a specific category.
+
+        - For **medication**:
+            - If `meds_already_logged = "📝 Update my log"`: updates existing logs based on `time_<med_id>_<dose_index>` keys.
+            - If submitting time-block answers: each `took_<med_id>_<dose_index> = yes` is logged along with `time_<med_id>_<dose_index>`.
+
+        - For **generic categories** (e.g., mood, food, sleep):
+            - Submits category-specific fields (e.g., `ate_today`, `slept_well`) and updates the log for today.
+
+        - For **sport**:
+            - If `did_sport` is false or not provided, all other sport-related fields are nulled out.
+
+        Returns a success message upon valid submission.
+        """,
+        request_body=openapi.Schema(
+            type=openapi.TYPE_OBJECT,
+            additional_properties=openapi.Schema(type=openapi.TYPE_STRING),
+            example={
+                "meds_already_logged": "📝 Update my log",
+                "time_5_0": "08:00",
+                "time_5_1": "20:00",
+                "took_5_0": "yes",
+                "time_5_0": "08:00",
+                "did_sport": "yes",
+                "sport_time": "30",
+                "sport_type": "Running"
+            }
+        ),
+        responses={
+            200: openapi.Response(
+                description="Log submitted successfully",
+                examples={
+                    "application/json": {"status": "success"}
+                }
+            ),
+            400: openapi.Response(
+                description="Invalid category",
+                examples={
+                    "application/json": {"error": "Invalid category"}
+                }
+            )
+        }
+    )
     def post(self, request, category):
         data = request.data
         today = localtime(tz_now()).date()
@@ -455,12 +497,15 @@ class CategoryChatSubmitView(APIView):
 def log_category(request, category):
     return render(request, 'dashboard/log_category.html', {'category': category})
 
+
 @login_required
 def dashboard_home(request):
     return render(request, "dashboard/dashboard.html")
 
+
 def keep_alive(request):
     return JsonResponse({"status": "success"})
+
 
 class DailyDocumentationView(LoginRequiredMixin, View):
     def get(self, request, date=None):
@@ -478,6 +523,7 @@ class DailyDocumentationView(LoginRequiredMixin, View):
         }
 
         return render(request, "dashboard/dashboard.html", context)
+
 
 @login_required
 def log_medication(request, date):
