@@ -1,4 +1,3 @@
-
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticated
@@ -9,6 +8,12 @@ from django.contrib.auth.decorators import login_required
 from django.shortcuts import render
 from drf_yasg.utils import swagger_auto_schema
 from drf_yasg import openapi
+from insights.services.metrics_computer import compute_metrics, compute_correlations
+from django.http import JsonResponse
+import traceback
+
+
+
 
 class AIInsightsAPIView(APIView):
     permission_classes = [IsAuthenticated]
@@ -23,16 +28,20 @@ class AIInsightsAPIView(APIView):
     )
 
     def get(self, request):
-        logs = fetch_user_logs(request.user)
+            logs = fetch_user_logs(request.user)
 
-        if not any(log.exists() for log in logs.values()):
-            message = "😊 It’s time to get to know each other! Start documenting your day-to-day life via the dashboard."
-            return Response({"insights": message})
+            if not any(log.exists() for log in logs.values()):
+                message = "😊 It’s time to get to know each other! Start documenting your day-to-day life via the dashboard."
+                return Response({"insights": message})
 
-        prompt = build_insight_prompt(logs)
-        ai_response = get_ai_insight(prompt)
-
-        return Response({"insights": ai_response})
+            # Step 1: Compute metrics & correlations
+            metrics = compute_metrics(logs)
+            correlations = compute_correlations(logs, metrics)
+            # Step 2: Build prompt with metrics & correlations
+            prompt = build_insight_prompt(logs, metrics=metrics, correlations=correlations)
+            # Step 3: Get AI insight text
+            ai_response = get_ai_insight(prompt)
+            return Response({"insights": ai_response})
 
 @login_required
 def insights_page_view(request):
