@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>{{ category|capfirst }} Log Summary</title>
+    <title>{{ category|capfirst|escape }} Log Summary</title>
     <style>
         body {
             font-family: 'Segoe UI', sans-serif;
@@ -48,7 +48,7 @@
 </head>
 <body>
     <div class="container">
-        <h2>📋 <span id="categoryTitle">{{ category|capfirst }}</span> Log for Today</h2>
+        <h2>📋 <span id="categoryTitle">{{ category|capfirst|escape }}</span> Log for Today</h2>
         <div id="logContainer" class="log">
             <p class="loading">Loading...</p>
         </div>
@@ -57,7 +57,7 @@
     </div>
     <script>
         document.addEventListener("DOMContentLoaded", () => {
-            const category = "{{ category }}";
+            const category = "{{ category|escapejs }}";
             const logContainer = document.getElementById("logContainer");
             const editLink = document.getElementById("editLink");
             console.log("Fetching summary from:", `/dashboard/api/log/${category}/summary/`);
@@ -69,8 +69,11 @@
             })
             .then(response => {
                 if (response.status === 302) {
+                    // Redirect should be handled server side; if API returns JSON redirect, handle here
                     return response.json().then(data => {
-                        window.location.href = data.redirect;
+                        if(data.redirect){
+                            window.location.href = data.redirect;
+                        }
                     });
                 } else if (!response.ok) {
                     throw new Error("Something went wrong while loading the data.");
@@ -80,20 +83,45 @@
             .then(data => {
                 logContainer.innerHTML = ""; // Clear loading
 
-                if (category === "medication") {
+                if (category === "medication" && Array.isArray(data.medications)) {
                     data.medications.forEach(item => {
                         const p = document.createElement("p");
-                        p.innerHTML = `<strong>${item.name}</strong><br>
-                                    Scheduled: ${item.scheduled_time || "N/A"}<br>
-                                    Taken: ${item.taken_time || "Not recorded"}<br><br>`;
+
+                        // Sanitize content by creating text nodes rather than using innerHTML for user data
+                        const nameStrong = document.createElement("strong");
+                        nameStrong.textContent = item.name || "Unknown medication";
+
+                        const scheduled = document.createElement("div");
+                        scheduled.textContent = `Scheduled: ${item.scheduled_time || "N/A"}`;
+
+                        const taken = document.createElement("div");
+                        taken.textContent = `Taken: ${item.taken_time || "Not recorded"}`;
+
+                        p.appendChild(nameStrong);
+                        p.appendChild(document.createElement("br"));
+                        p.appendChild(scheduled);
+                        p.appendChild(taken);
+                        p.appendChild(document.createElement("br"));
+                        p.appendChild(document.createElement("br"));
+
+                        logContainer.appendChild(p);
+                    });
+                } else if (Array.isArray(data.fields)) {
+                    data.fields.forEach(item => {
+                        const p = document.createElement("p");
+
+                        const labelStrong = document.createElement("strong");
+                        labelStrong.textContent = `${item.label || "Field"}: `;
+
+                        const valueSpan = document.createElement("span");
+                        valueSpan.textContent = item.value || "Not entered";
+
+                        p.appendChild(labelStrong);
+                        p.appendChild(valueSpan);
                         logContainer.appendChild(p);
                     });
                 } else {
-                    data.fields.forEach(item => {
-                        const p = document.createElement("p");
-                        p.innerHTML = `<strong>${item.label}:</strong> ${item.value || "Not entered"}`;
-                        logContainer.appendChild(p);
-                    });
+                    logContainer.textContent = "No data to display.";
                 }
 
                 editLink.href = `/dashboard/log/${category}/edit/`;

@@ -126,7 +126,13 @@
                 }
             }
 
-            questionBox.innerHTML = `<div class="question">${q.question}</div>`;
+            // Safely create question element instead of using innerHTML
+            questionBox.innerHTML = "";
+            const questionDiv = document.createElement("div");
+            questionDiv.className = "question";
+            questionDiv.textContent = q.question;
+            questionBox.appendChild(questionDiv);
+
             answerOptions.innerHTML = "";
 
             if (q.type === "boolean" || q.type === "bool") {

@@ -70,10 +70,8 @@
                 <button type="submit">Logout</button>
             </form>
             <p><a href="{% url 'dashboard:dashboard_home' %}"><button>Dashboard</button></a></p>
-            <p><a href="{% url 'my_statistics:statistics_view' %}"><button>Statistics</button></a></p>
             <p><a href="{% url 'insights:ai_insight_page' %}"><button>Insights</button></a></p>
             <p><a href="{% url 'medications:medications_page' %}"><button>Manage Medications</button></a></p>
-            <p><a href="{% url 'chat_room' room_name='general' %}"><button>Join Chat</button></a></p>
             <button onclick="toggleSearchForm()">What interests you?</button>
             <div id="search-form" style="display:none;" class="search-container">
                 <form action="{% url 'what_interested_you:search' %}" method="get">
