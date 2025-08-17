@@ -21,8 +21,10 @@ from . import views
 from rest_framework import permissions
 from drf_yasg.views import get_schema_view
 from drf_yasg import openapi
-from rest_framework.permissions import AllowAny
+from rest_framework.permissions import IsAdminUser
 from rest_framework.authtoken.views import obtain_auth_token
+from django.contrib.auth.decorators import login_required
+
 
 schema_view = get_schema_view(
    openapi.Info(
@@ -30,8 +32,8 @@ schema_view = get_schema_view(
       default_version='v1',
       description="API documentation",
    ),
-   public=True,
-   permission_classes=(AllowAny,),
+   public=False,
+   permission_classes=(IsAdminUser,),
 )
 
 urlpatterns = [
@@ -49,7 +51,7 @@ urlpatterns = [
     ),
     path("what_interested_you/", include("what_interested_you.urls")),
     path("keep-alive/", views.keep_alive, name="keep_alive"),
-    path("chat/<str:room_name>/", views.room, name="chat_room"),
+    path("chat/<str:room_name>/", login_required(views.room), name="chat_room"),
     path("chatbot/", include("chatbot.urls")),
     path('swagger/', schema_view.with_ui('swagger', cache_timeout=0), name='schema-swagger-ui'),
     path("insights/", include("insights.urls")),
