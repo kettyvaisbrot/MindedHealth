@@ -62,7 +62,17 @@ class SleepingLog(models.Model):
     def __str__(self):
         return f"{self.date} - Sleep Time: {self.went_to_sleep_yesterday } - Wake Up Time: {self.wake_up_time}"
 
-
+    def get_sleep_hours(self):
+        """Compute hours slept, returns float or None if times missing"""
+        if self.went_to_sleep_yesterday and self.wake_up_time:
+            from datetime import datetime, timedelta
+            sleep_dt = datetime.combine(datetime.today(), self.went_to_sleep_yesterday)
+            wake_dt = datetime.combine(datetime.today(), self.wake_up_time)
+            if wake_dt <= sleep_dt:
+                wake_dt += timedelta(days=1)
+            return (wake_dt - sleep_dt).total_seconds() / 3600
+        return None
+    
 class Meetings(models.Model):
     MEETING_TYPES_CHOICES = [
         ("family", "With Family"),

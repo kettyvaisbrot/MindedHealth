@@ -54,7 +54,7 @@
 </head>
 <body>
 
-    <h1>Your AI Insight</h1>
+    <h1>Your Weekly Improvements 🌟</h1>
 
     <div class="insight-box" id="insight-box">
         Loading insights...
@@ -76,13 +76,16 @@
                 "Accept": "application/json"
             }
         })
-        .then(response => {
+        .then(async response => {
             if (!response.ok) {
+                const text = await response.text();
+                console.error("Raw response from server:", text);
                 throw new Error(`HTTP error! status: ${response.status}`);
             }
             return response.json();
         })
         .then(data => {
+            // Render AI text insights only
             const box = document.getElementById("insight-box");
             box.innerHTML = data.insights.replace(/\n/g, "<br>");
         })
