@@ -1,3 +1,4 @@
+import logging
 from dashboard.category_config import CATEGORY_CONFIG
 from django.utils.timezone import localtime, now as tz_now
 from drf_yasg.utils import swagger_auto_schema
@@ -19,6 +20,10 @@ from django.utils.timezone import localtime, now
 from django.http import HttpResponseNotFound, JsonResponse
 from django.utils.decorators import method_decorator
 from datetime import datetime
+from rest_framework.permissions import IsAuthenticated
+
+# Logger for security + error monitoring
+logger = logging.getLogger(__name__)
 
 
 def get_bool_query_param(request, param_name):
@@ -27,7 +32,7 @@ def get_bool_query_param(request, param_name):
 
 
 class CategorySummaryView(APIView):
-    permission_classes = []
+    permission_classes = [IsAuthenticated]
 
     @swagger_auto_schema(
         operation_description="Get a summary of today's data for a given category (e.g., sleep, food, exercise). "
@@ -50,13 +55,13 @@ class CategorySummaryView(APIView):
     def get(self, request, category):
         config = CATEGORY_CONFIG.get(category)
         if not config:
+            logger.warning("Invalid category access attempt by user %s: %s", request.user, category)
             return Response({"error": "Invalid category."}, status=404)
 
         today = localtime(tz_now()).date()
         model = config.get("model")
 
         if category == "medication" or model is None:
-            # Special case for medication logs
             logs = MedicationLog.objects.filter(user=request.user, date=today).select_related("medication")
             if not logs.exists():
                 return Response({"redirect": f"/dashboard/{category}/chat"}, status=302)
@@ -74,7 +79,6 @@ class CategorySummaryView(APIView):
                 "med_logs": med_logs,
             })
 
-        # Generic categories:
         instance = model.objects.filter(user=request.user, date=today).first()
         if not instance:
             return Response({"redirect": f"/dashboard/{category}/chat"}, status=302)
@@ -97,13 +101,12 @@ def category_summary_page(request, category):
         template_name = 'dashboard/medication_summary.html'
     else:
         template_name = 'dashboard/category_summary.html'
-
     return render(request, template_name, {'category': category})
 
 
 @method_decorator(login_required, name='dispatch')
 class CategoryEditView(APIView):
-    permission_classes = []
+    permission_classes = [IsAuthenticated]
 
     @swagger_auto_schema(
         operation_description="Retrieve editable log data for a specific category (e.g., sleep, mood) for today.",
@@ -120,7 +123,6 @@ class CategoryEditView(APIView):
             logs = MedicationLog.objects.filter(user=request.user, date=today)
 
             med_logs = {}
-
             for med in medications:
                 raw_times = med.dose_times
                 if isinstance(raw_times, list) and len(raw_times) == 1 and isinstance(raw_times[0], str):
@@ -148,10 +150,7 @@ class CategoryEditView(APIView):
                         "time_taken": existing_log.time_taken if existing_log else None
                     })
 
-                med_logs[med.id] = {
-                    "name": med.name,
-                    "doses": doses
-                }
+                med_logs[med.id] = {"name": med.name, "doses": doses}
 
             return render(request, 'dashboard/medication_edit.html', {
                 'category': category,
@@ -160,6 +159,7 @@ class CategoryEditView(APIView):
 
         config = CATEGORY_CONFIG.get(category)
         if not config:
+            logger.warning("Invalid category edit attempt by user %s: %s", request.user, category)
             return HttpResponseNotFound("Invalid category.")
 
         model = config['model']
@@ -189,11 +189,13 @@ class CategoryEditView(APIView):
                             defaults={"time_taken": datetime.strptime(value, "%H:%M").time()}
                         )
                     except (ValueError, Medication.DoesNotExist):
+                        logger.warning("Invalid medication update attempt by user %s", request.user)
                         continue
             return redirect('dashboard:dashboard_home')
 
         config = CATEGORY_CONFIG.get(category)
         if not config:
+            logger.warning("Invalid category post attempt by user %s: %s", request.user, category)
             return HttpResponseNotFound("Invalid category.")
 
         model = config['model']
@@ -212,43 +214,16 @@ class CategoryEditView(APIView):
 
 
 class CategoryChatView(APIView):
-    permission_classes = []
+    permission_classes = [IsAuthenticated]
 
     @swagger_auto_schema(
-        operation_description="""
-        Fetch questions or existing data for a given category to support chat-based data entry.
-
-        - If a log already exists and `force=false`, a summary or message is returned instead of questions.
-        - If `force=true`, forces showing the questions again even if data exists.
-        - If `edit=true` for medication, shows editable form again even if logs exist.
-
-        Used to power the conversational documentation experience in the dashboard.
-        """,
+        operation_description="Fetch questions or existing data for a given category to support chat-based data entry.",
         manual_parameters=[
-            openapi.Parameter(
-                'category',
-                openapi.IN_PATH,
-                description="The category to fetch questions for (e.g., 'sleep', 'food', 'medication').",
-                type=openapi.TYPE_STRING,
-                required=True
-            ),
-            openapi.Parameter(
-                'force',
-                openapi.IN_QUERY,
-                description="Force showing questions even if data exists (true/false).",
-                type=openapi.TYPE_BOOLEAN
-            ),
-            openapi.Parameter(
-                'edit',
-                openapi.IN_QUERY,
-                description="Edit mode for medication logs (true/false).",
-                type=openapi.TYPE_BOOLEAN
-            ),
+            openapi.Parameter('category', openapi.IN_PATH, description="Category", type=openapi.TYPE_STRING, required=True),
+            openapi.Parameter('force', openapi.IN_QUERY, description="Force questions", type=openapi.TYPE_BOOLEAN),
+            openapi.Parameter('edit', openapi.IN_QUERY, description="Edit mode for medication", type=openapi.TYPE_BOOLEAN),
         ],
-        responses={
-            200: openapi.Response(description="Questions or existing data returned."),
-            404: openapi.Response(description="Invalid category."),
-        }
+        responses={200: 'OK', 404: 'Invalid category'}
     )
     def get(self, request, category):
         today = localtime(tz_now()).date()
@@ -267,12 +242,8 @@ class CategoryChatView(APIView):
                         "time_taken": log.time_taken,
                         "dose_index": log.dose_index,
                     })
-                return Response({
-                    "category": "medication",
-                    "summary": med_dict,
-                })
+                return Response({"category": "medication", "summary": med_dict})
 
-            # When edit=true OR force=true — return questions + existing data
             questions = get_medication_questions(request.user)
             existing_data = {}
             for log in logs:
@@ -282,15 +253,11 @@ class CategoryChatView(APIView):
                     "time_taken": log.time_taken.isoformat() if log.time_taken else None,
                 })
 
-            return Response({
-                "category": "medication",
-                "questions": questions,
-                "existing_data": existing_data,
-            })
+            return Response({"category": "medication", "questions": questions, "existing_data": existing_data})
 
-        # Handle all other categories (generic case)
         config = CATEGORY_CONFIG.get(category)
         if not config:
+            logger.warning("Invalid chat category by user %s: %s", request.user, category)
             return Response({"error": "Invalid category."}, status=404)
 
         model = config.get("model")
@@ -302,12 +269,7 @@ class CategoryChatView(APIView):
             return Response({"message": "Log already exists", "category": category})
 
         questions = config["questions"](request.user) if callable(config["questions"]) else config["questions"]
-
-        return Response({
-            "category": category,
-            "questions": questions,
-            "existing_data": {},
-        })
+        return Response({"category": category, "questions": questions, "existing_data": {}})
 
 
 @login_required
@@ -324,10 +286,7 @@ def chat_page(request, category):
         existing_log = MedicationLog.objects.filter(user=user, date=today).first()
     else:
         Model = config.get("model")
-        if Model is None:
-            existing_log = None
-        else:
-            existing_log = Model.objects.filter(user=user, date=today).first()
+        existing_log = Model.objects.filter(user=user, date=today).first() if Model else None
 
     if existing_log and not force:
         return render(request, "dashboard/category_exists.html", {"category": category})
@@ -336,91 +295,12 @@ def chat_page(request, category):
 
 
 class CategoryChatSubmitView(APIView):
-    permission_classes = []
+    permission_classes = [IsAuthenticated]
 
     @swagger_auto_schema(
-        operation_description="Get summary data for a category",
-        manual_parameters=[
-            openapi.Parameter(
-                'category',
-                openapi.IN_PATH,
-                description="Category name",
-                type=openapi.TYPE_STRING,
-                required=True
-            ),
-            openapi.Parameter(
-                'force',
-                openapi.IN_QUERY,
-                description="Force refetch",
-                type=openapi.TYPE_BOOLEAN
-            )
-        ],
-        responses={
-            200: openapi.Response(description="Success"),
-            404: openapi.Response(description="Not found")
-        }
-    )
-    def get(self, request, category):
-        user = request.user
-        today = localtime(tz_now()).date()
-
-        existing_log = self._get_today_log(user, category, today)
-        if existing_log:
-            # Render your 'log exists' HTML page if data exists for today
-            return render(request, "dashboard/log_exists.html", {
-                "category": category,
-            })
-
-        # Otherwise render the chat start page for this category
-        return render(request, f"dashboard/chat_{category}.html", {
-            "category": category,
-            "start_chat": True,
-        })
-
-    @swagger_auto_schema(
-        operation_description="""
-        Submit chat data for a specific category.
-
-        - For **medication**:
-            - If `meds_already_logged = "📝 Update my log"`: updates existing logs based on `time_<med_id>_<dose_index>` keys.
-            - If submitting time-block answers: each `took_<med_id>_<dose_index> = yes` is logged along with `time_<med_id>_<dose_index>`.
-
-        - For **generic categories** (e.g., mood, food, sleep):
-            - Submits category-specific fields (e.g., `ate_today`, `slept_well`) and updates the log for today.
-
-        - For **sport**:
-            - If `did_sport` is false or not provided, all other sport-related fields are nulled out.
-
-        Returns a success message upon valid submission.
-        """,
-        request_body=openapi.Schema(
-            type=openapi.TYPE_OBJECT,
-            additional_properties=openapi.Schema(type=openapi.TYPE_STRING),
-            example={
-                "meds_already_logged": "📝 Update my log",
-                "time_5_0": "08:00",
-                "time_5_1": "20:00",
-                "took_5_0": "yes",
-                "time_5_0": "08:00",
-                "did_sport": "yes",
-                "sport_time": "30",
-                "sport_type": "Running"
-            }
-        ),
-        responses={
-            200: openapi.Response(
-                description="Log submitted successfully",
-                examples={
-                    "application/json": {"status": "success"}
-                }
-            ),
-            400: openapi.Response(
-                description="Invalid category",
-                examples={
-                    "application/json": {"error": "Invalid category"}
-                }
-            )
-        }
+        operation_description="Submit chat data for a category",
+        manual_parameters=[openapi.Parameter('category', openapi.IN_PATH, description="Category", type=openapi.TYPE_STRING, required=True)],
+        responses={200: 'OK', 400: 'Invalid category'}
     )
     def post(self, request, category):
         data = request.data
@@ -442,10 +322,10 @@ class CategoryChatSubmitView(APIView):
                                 defaults={"time_taken": datetime.strptime(value, "%H:%M").time()}
                             )
                         except (ValueError, Medication.DoesNotExist):
+                            logger.warning("Invalid medication update attempt by user %s", user)
                             continue
                 return Response({"status": "success"})
 
-            # time-block flow
             for key, value in data.items():
                 if key.startswith("took_") and value.lower() == "yes":
                     try:
@@ -462,12 +342,13 @@ class CategoryChatSubmitView(APIView):
                             defaults={"time_taken": datetime.strptime(time_str, "%H:%M").time()}
                         )
                     except (ValueError, Medication.DoesNotExist):
+                        logger.warning("Invalid medication time log attempt by user %s", user)
                         continue
             return Response({"status": "success"})
 
-        # Generic categories
         config = CATEGORY_CONFIG.get(category)
         if not config:
+            logger.warning("Invalid category submit attempt by user %s: %s", user, category)
             return Response({"error": "Invalid category"}, status=400)
 
         Model = config["model"]
@@ -483,12 +364,10 @@ class CategoryChatSubmitView(APIView):
                 else:
                     field_data[field] = val
 
-        # Sport logic
-        if category == "sport":
-            if not field_data.get("did_sport"):
-                field_data["sport_type"] = None
-                field_data["other_sport"] = None
-                field_data["sport_time"] = None
+        if category == "sport" and not field_data.get("did_sport"):
+            field_data["sport_type"] = None
+            field_data["other_sport"] = None
+            field_data["sport_time"] = None
 
         Model.objects.update_or_create(user=user, date=today, defaults=field_data)
         return Response({"status": "success"})
@@ -503,6 +382,7 @@ def dashboard_home(request):
     return render(request, "dashboard/dashboard.html")
 
 
+@login_required
 def keep_alive(request):
     return JsonResponse({"status": "success"})
 
@@ -541,7 +421,8 @@ def log_medication(request, date):
                 log_medication_entry(request.user, medication_id, date, time_taken_str)
                 success_message = "Medication entry saved successfully!"
             except Exception as e:
-                error_message = f"An error occurred: {e}"
+                logger.error("Error logging medication for user %s: %s", request.user, e)
+                error_message = "An unexpected error occurred. Please try again."
 
     logs_for_date = MedicationLog.objects.filter(user=request.user, date=date)
 

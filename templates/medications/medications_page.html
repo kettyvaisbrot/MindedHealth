@@ -107,148 +107,148 @@
     </div>
   </div>
 
-  <script>
-    const apiBaseUrl = '/medications/api/medications/';
+<script>
+  const apiBaseUrl = '/medications/api/medications/';
 
-    // CSRF token helper (Django sets csrftoken cookie)
-    function getCookie(name) {
-      let cookieValue = null;
-      if (document.cookie && document.cookie !== '') {
-        const cookies = document.cookie.split(';');
-        for (let cookie of cookies) {
-          cookie = cookie.trim();
-          if (cookie.startsWith(name + '=')) {
-            cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
-            break;
-          }
+  // CSRF token helper (Django sets csrftoken cookie)
+  function getCookie(name) {
+    let cookieValue = null;
+    if (document.cookie && document.cookie !== '') {
+      const cookies = document.cookie.split(';');
+      for (let cookie of cookies) {
+        cookie = cookie.trim();
+        if (cookie.startsWith(name + '=')) {
+          cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+          break;
         }
       }
-      return cookieValue;
     }
-    const csrftoken = getCookie('csrftoken');
+    return cookieValue;
+  }
+  const csrftoken = getCookie('csrftoken');
 
-    // Fetch and show all medications
-    function loadMedications() {
-      fetch(apiBaseUrl, {
-        headers: { 'X-CSRFToken': csrftoken },
-        credentials: 'same-origin'
-      })
-      .then(res => res.json())
-      .then(data => {
-        const tbody = document.getElementById('medications-body');
-        tbody.innerHTML = '';
-        data.forEach(med => {
-          const tr = document.createElement('tr');
-          tr.innerHTML = `
-            <td>${med.name}</td>
-            <td>${med.dose}</td>
-            <td>${med.times_per_day}</td>
-            <td>${med.dose_times.join(', ')}</td>
-            <td>
-              <button onclick="editMedication(${med.id})">Edit</button>
-              <button onclick="deleteMedication(${med.id})">Delete</button>
-            </td>
-          `;
-          tbody.appendChild(tr);
-        });
-        document.getElementById('medications-table').style.display = 'table';
-        document.getElementById('med-form-container').style.display = 'none';
+  // Fetch and show all medications (with pagination support)
+  function loadMedications() {
+    fetch(apiBaseUrl, {
+      headers: { 'X-CSRFToken': csrftoken },
+      credentials: 'same-origin'
+    })
+    .then(res => res.json())
+    .then(data => {
+      const tbody = document.getElementById('medications-body');
+      tbody.innerHTML = '';
+      const meds = data.results || []; // use results array
+      meds.forEach(med => {
+        const tr = document.createElement('tr');
+        tr.innerHTML = `
+          <td>${med.name}</td>
+          <td>${med.dose}</td>
+          <td>${med.times_per_day}</td>
+          <td>${med.dose_times.join(', ')}</td>
+          <td>
+            <button onclick="editMedication(${med.id})">Edit</button>
+            <button onclick="deleteMedication(${med.id})">Delete</button>
+          </td>
+        `;
+        tbody.appendChild(tr);
       });
+      document.getElementById('medications-table').style.display = meds.length ? 'table' : 'none';
+      document.getElementById('med-form-container').style.display = 'none';
+    });
+  }
+
+  // Show add medication form
+  document.getElementById('add-med-btn').addEventListener('click', () => {
+    document.getElementById('form-title').innerText = 'Add Medication';
+    document.getElementById('med-id').value = '';
+    document.getElementById('name').value = '';
+    document.getElementById('dose').value = '';
+    document.getElementById('times_per_day').value = '';
+    document.getElementById('dose_times').value = '';
+    document.getElementById('med-form-container').style.display = 'block';
+    document.getElementById('medications-table').style.display = 'none';
+  });
+
+  // Handle form submit for add/edit
+  document.getElementById('med-form').addEventListener('submit', (e) => {
+    e.preventDefault();
+    const id = document.getElementById('med-id').value;
+    const payload = {
+      name: document.getElementById('name').value,
+      dose: document.getElementById('dose').value,
+      times_per_day: parseInt(document.getElementById('times_per_day').value),
+      dose_times: document.getElementById('dose_times').value.split(',').map(s => s.trim())
+    };
+
+    let url = apiBaseUrl;
+    let method = 'POST';
+    if (id) {
+      url += id + '/';
+      method = 'PUT';
     }
 
-    // Show add medication form
-    document.getElementById('add-med-btn').addEventListener('click', () => {
-      document.getElementById('form-title').innerText = 'Add Medication';
-      document.getElementById('med-id').value = '';
-      document.getElementById('name').value = '';
-      document.getElementById('dose').value = '';
-      document.getElementById('times_per_day').value = '';
-      document.getElementById('dose_times').value = '';
+    fetch(url, {
+      method: method,
+      headers: {
+        'Content-Type': 'application/json',
+        'X-CSRFToken': csrftoken,
+      },
+      body: JSON.stringify(payload),
+      credentials: 'same-origin'
+    }).then(res => {
+      if (res.ok) {
+        loadMedications();
+      } else {
+        alert('Failed to save medication.');
+      }
+    });
+  });
+
+  // Edit medication: fetch med details and populate form
+  function editMedication(id) {
+    fetch(apiBaseUrl + id + '/', {
+      headers: { 'X-CSRFToken': csrftoken },
+      credentials: 'same-origin'
+    })
+    .then(res => res.json())
+    .then(med => {
+      document.getElementById('form-title').innerText = 'Edit Medication';
+      document.getElementById('med-id').value = med.id;
+      document.getElementById('name').value = med.name;
+      document.getElementById('dose').value = med.dose;
+      document.getElementById('times_per_day').value = med.times_per_day;
+      document.getElementById('dose_times').value = med.dose_times.join(', ');
       document.getElementById('med-form-container').style.display = 'block';
       document.getElementById('medications-table').style.display = 'none';
     });
+  }
 
-    // Handle form submit for add/edit
-    document.getElementById('med-form').addEventListener('submit', (e) => {
-      e.preventDefault();
-      const id = document.getElementById('med-id').value;
-      const payload = {
-        name: document.getElementById('name').value,
-        dose: document.getElementById('dose').value,
-        times_per_day: parseInt(document.getElementById('times_per_day').value),
-        dose_times: document.getElementById('dose_times').value.split(',').map(s => s.trim())
-      };
-
-      let url = apiBaseUrl;
-      let method = 'POST';
-      if (id) {
-        url += id + '/';
-        method = 'PUT';
+  // Delete medication
+  function deleteMedication(id) {
+    if (!confirm('Are you sure you want to delete this medication?')) return;
+    fetch(apiBaseUrl + id + '/', {
+      method: 'DELETE',
+      headers: { 'X-CSRFToken': csrftoken },
+      credentials: 'same-origin'
+    }).then(res => {
+      if (res.ok) {
+        loadMedications();
+      } else {
+        alert('Failed to delete medication.');
       }
-
-      fetch(url, {
-        method: method,
-        headers: {
-          'Content-Type': 'application/json',
-          'X-CSRFToken': csrftoken,
-        },
-        body: JSON.stringify(payload),
-        credentials: 'same-origin'
-      }).then(res => {
-        if (res.ok) {
-          loadMedications();
-        } else {
-          alert('Failed to save medication.');
-        }
-      });
     });
+  }
 
-    // Edit medication: fetch med details and populate form
-    function editMedication(id) {
-      fetch(apiBaseUrl + id + '/', {
-        headers: { 'X-CSRFToken': csrftoken },
-        credentials: 'same-origin'
-      })
-      .then(res => res.json())
-      .then(med => {
-        document.getElementById('form-title').innerText = 'Edit Medication';
-        document.getElementById('med-id').value = med.id;
-        document.getElementById('name').value = med.name;
-        document.getElementById('dose').value = med.dose;
-        document.getElementById('times_per_day').value = med.times_per_day;
-        document.getElementById('dose_times').value = med.dose_times.join(', ');
-        document.getElementById('med-form-container').style.display = 'block';
-        document.getElementById('medications-table').style.display = 'none';
-      });
-    }
+  // Cancel form button
+  document.getElementById('cancel-btn').addEventListener('click', () => {
+    document.getElementById('med-form-container').style.display = 'none';
+    document.getElementById('medications-table').style.display = 'table';
+  });
 
-    // Delete medication
-    function deleteMedication(id) {
-      if (!confirm('Are you sure you want to delete this medication?')) return;
-      fetch(apiBaseUrl + id + '/', {
-        method: 'DELETE',
-        headers: {
-          'X-CSRFToken': csrftoken,
-        },
-        credentials: 'same-origin'
-      }).then(res => {
-        if (res.ok) {
-          loadMedications();
-        } else {
-          alert('Failed to delete medication.');
-        }
-      });
-    }
+  // Initial load
+  loadMedications();
+</script>
 
-    // Cancel form button
-    document.getElementById('cancel-btn').addEventListener('click', () => {
-      document.getElementById('med-form-container').style.display = 'none';
-      document.getElementById('medications-table').style.display = 'table';
-    });
-
-    // Initial load
-    loadMedications();
-  </script>
 
 </body>
 </html>
