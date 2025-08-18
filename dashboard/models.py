@@ -2,7 +2,6 @@ from django.db import models
 from django.contrib.auth.models import User
 from django.utils import timezone
 
-
 class FoodLog(models.Model):
     MEAL_CHOICES = [
         ("breakfast", "Breakfast"),
@@ -12,11 +11,11 @@ class FoodLog(models.Model):
 
     user = models.ForeignKey(User, on_delete=models.CASCADE)
     date = models.DateField()
-    breakfast_ate = models.BooleanField(default=False,null=True, blank=True)
+    breakfast_ate = models.BooleanField(default=False, null=True, blank=True)
     breakfast_time = models.TimeField(null=True, blank=True)
-    lunch_ate = models.BooleanField(default=False,null=True, blank=True)
+    lunch_ate = models.BooleanField(default=False, null=True, blank=True)
     lunch_time = models.TimeField(null=True, blank=True)
-    dinner_ate = models.BooleanField(default=False,null=True, blank=True)
+    dinner_ate = models.BooleanField(default=False, null=True, blank=True)
     dinner_time = models.TimeField(null=True, blank=True)
 
     def __str__(self):
@@ -39,13 +38,12 @@ class SportLog(models.Model):
         max_length=10, choices=SPORT_CHOICES, null=True, blank=True
     )
     other_sport = models.CharField(max_length=100, null=True, blank=True)
-    sport_time = models.TimeField(default="00:00:00",null=True, blank=True)  
+    sport_time = models.TimeField(default="00:00:00", null=True, blank=True)
 
     def __str__(self):
         if self.sport_time:
             return f"Sport Log on {self.date} at {self.sport_time.strftime('%H:%M')} for {self.user.username}"
-        else:
-            return f"Sport Log on {self.date} for {self.user.username}"
+        return f"Sport Log on {self.date} for {self.user.username}"
 
 
 def get_tomorrow_date():
@@ -55,12 +53,12 @@ def get_tomorrow_date():
 class SleepingLog(models.Model):
     user = models.ForeignKey(User, on_delete=models.CASCADE)
     date = models.DateField(auto_now_add=True)
-    went_to_sleep_yesterday = models.TimeField(null=True, blank=True) 
-    wake_up_time = models.TimeField(blank=True, null=True)
-    woke_up_during_night = models.BooleanField(default=False)  
+    went_to_sleep_yesterday = models.TimeField(null=True, blank=True)
+    wake_up_time = models.TimeField(null=True, blank=True)
+    woke_up_during_night = models.BooleanField(default=False)
 
     def __str__(self):
-        return f"{self.date} - Sleep Time: {self.went_to_sleep_yesterday } - Wake Up Time: {self.wake_up_time}"
+        return f"{self.date} - Sleep Time: {self.went_to_sleep_yesterday} - Wake Up Time: {self.wake_up_time}"
 
     def get_sleep_hours(self):
         """Compute hours slept, returns float or None if times missing"""
@@ -72,7 +70,8 @@ class SleepingLog(models.Model):
                 wake_dt += timedelta(days=1)
             return (wake_dt - sleep_dt).total_seconds() / 3600
         return None
-    
+
+
 class Meetings(models.Model):
     MEETING_TYPES_CHOICES = [
         ("family", "With Family"),
@@ -84,12 +83,8 @@ class Meetings(models.Model):
     date = models.DateField()
     time = models.TimeField(null=True, blank=True)
     met_people = models.BooleanField(default=False, null=True, blank=True)
-    positivity_rating = models.IntegerField(
-        default=1, choices=[(i, str(i)) for i in range(1, 6)]
-    )
-    meeting_type = models.CharField(
-        max_length=10, choices=MEETING_TYPES_CHOICES, null=True, blank=True
-    )
+    positivity_rating = models.IntegerField(default=1, choices=[(i, str(i)) for i in range(1, 6)])
+    meeting_type = models.CharField(max_length=10, choices=MEETING_TYPES_CHOICES, null=True, blank=True)
 
     def __str__(self):
         return f"Meeting on {self.date}"
@@ -115,3 +110,4 @@ class FeltOffLog(models.Model):
 
     def __str__(self):
         return f"{self.user.username} - Felt Off on {self.date}"
+
