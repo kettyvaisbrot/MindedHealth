@@ -1,0 +1,116 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}MindedHealth{% endblock %}</title>
+    <style>
+        /* Global Styling */
+        body {
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 0;
+            background-color: #f9f9f9;
+            color: #333;
+        }
+        a {
+            text-decoration: none;
+            color: inherit;
+        }
+
+        /* Navbar */
+        .navbar {
+            background: #007bff;
+            color: white;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 15px 30px;
+
+            position: sticky;   /* Make navbar sticky */
+            top: 0;             /* Stick to top */
+            z-index: 1000;      /* Stay above other content */
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1); /* Optional shadow */
+        }
+        .navbar h1 {
+            margin: 0;
+            font-size: 24px;
+        }
+        .nav-links {
+            display: flex;
+            gap: 20px;
+        }
+        .nav-links a {
+            color: white;
+            font-weight: bold;
+        }
+        .nav-links a:hover {
+            text-decoration: underline;
+        }
+        .logout-form {
+            display: inline;
+        }
+
+        .logout-form button {
+            background: none;
+            border: none;
+            color: white;        
+            font-weight: bold;    
+            font-size: 16px;     
+            cursor: pointer;
+            padding: 0;
+            margin: 0;
+            text-decoration: none;
+        }
+
+        .logout-form button:hover {
+            text-decoration: underline;
+        }
+
+        /* Footer */
+        footer {
+            text-align: center;
+            padding: 20px;
+            background: #007bff;
+            color: white;
+            margin-top: 40px;
+        }
+
+        /* Content Container */
+        .container {
+            max-width: 900px;
+            margin: 80px auto 40px; /* Add top margin so content isn't hidden behind navbar */
+            padding: 20px;
+            background: #fff;
+            border-radius: 8px;
+            box-shadow: 0 0 10px rgba(0,0,0,0.1);
+        }
+    </style>
+    {% block extra_css %}{% endblock %}
+</head>
+<body>
+    <div class="navbar">
+        <h1>MindedHealth</h1>
+        <div class="nav-links">
+            <a href="{% url 'home' %}">Home</a>
+            <a href="{% url 'about_us' %}">About</a>
+            <a href="{% url 'features' %}">Features</a>
+            {% if user.is_authenticated %}
+                <form method="post" action="{% url 'logout' %}" class="logout-form">
+                    {% csrf_token %}
+                    <button type="submit">Logout</button>
+                </form>
+            {% else %}
+                <a href="{% url 'login' %}">Login</a>
+                <a href="{% url 'register' %}">Register</a>
+            {% endif %}
+        </div>
+    </div>
+
+    {% block content %}{% endblock %}
+
+    <footer>
+        &copy; 2025 MindedHealth. All rights reserved.
+    </footer>
+</body>
+</html>

@@ -1,0 +1,14 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Therapist Page</title>
+</head>
+<body>
+    <h1>Welcome to Therapist Page</h1>
+    <form action="{% url 'logout' %}" method="post" style="margin-top: 20px;">
+        {% csrf_token %}
+        <button type="submit">Logout</button>
+    </form>
+</body>
+</html>

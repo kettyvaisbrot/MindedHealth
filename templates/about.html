@@ -1,0 +1,58 @@
+{% extends "base.html" %}
+
+{% block title %}About Us - MindedHealth{% endblock %}
+
+{% block extra_css %}
+<style>
+    .welcome-text a {
+        text-decoration: underline;
+        color: #007bff; 
+        font-weight: bold;
+    }
+
+    .welcome-text a:hover {
+        color: #0056b3; 
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container">
+    <h2>About MindedHealth</h2>
+    <p>
+        At MindedHealth, we believe mental well-being should be accessible, understandable, and supported.
+    </p>
+    <p>
+        Our platform helps <strong>users</strong> track daily habits, gain insights, and provides a supportive space for families and therapists.
+    </p>
+    
+    <h3>Our Mission</h3>
+    <p>
+        To empower individuals and families to take control of their mental well-being with tools, insights, and a supportive community.
+    </p>
+    
+    <h3>Our Vision</h3>
+    <p>
+        A world where mental health is treated with the same care, attention, and innovation as physical health.
+    </p>
+
+    <h3>Key Features</h3>
+    <p>Some of the tools available on MindedHealth include:</p>
+
+    <ul>
+        <li>📊 Dashboard</li>
+        <li>🤖 AI Insights</li>
+        <li>💊 Manage Medications</li>
+        <li>🔍 Tips & Information</li>
+        <li>📝 Family Documentation</li>
+        <li>💬 Family & Therapist Chat</li>
+        <li>📈 Activity & Statistics for Therapists</li>
+        <li>🧩 Personalized Recommendations for Therapists</li>
+        <li>🤝 Family Collaboration</li>
+    </ul>
+
+    <p class="welcome-text">
+        You can check the current available features <a href="{% url 'features' %}">here</a>.
+    </p>
+</div>
+{% endblock %}

@@ -1,18 +1,18 @@
-# models.py
 from django.db import models
-from django.contrib.auth.models import User
+from django.contrib.auth import get_user_model
+User = get_user_model()
 
 
 class Medication(models.Model):
     name = models.CharField(max_length=255)
     times_per_day = (
         models.PositiveIntegerField()
-    )  # Times per day the medication should be taken
-    dose = models.CharField(max_length=255)  # Medication dose details
+    )
+    dose = models.CharField(max_length=255)
     user = models.ForeignKey(User, on_delete=models.CASCADE)
     dose_times = models.JSONField(
         default=list
-    )  # List of time strings (e.g., ["08:00", "14:00", "20:00"])
+    )
 
     def __str__(self):
         return self.name

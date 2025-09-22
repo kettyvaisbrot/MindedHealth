@@ -1,0 +1,45 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Therapist Dashboard</title>
+</head>
+<body>
+    <h1>Welcome, {{ therapist.username }}</h1>
+
+    <h3>Which patient do you want to view?</h3>
+
+    {% if assigned_patients %}
+        <ul>
+            {% for patient in assigned_patients %}
+                <li>
+                    <a href="{% url 'patient_detail' patient.id %}">
+                        {{ patient.user.username }}
+                    </a>
+                </li>
+            {% endfor %}
+        </ul>
+    {% else %}
+        <p>You haven't assigned any patients yet.</p>
+    {% endif %}
+
+    <h3>Add a patient by email</h3>
+    <form method="post">
+        {% csrf_token %}
+        <input type="email" name="email" placeholder="Patient Email" required>
+        <button type="submit">Add Patient</button>
+    </form>
+
+    {% if search_result %}
+        <p style="color: green;">{{ search_result }}</p>
+    {% endif %}
+    {% if error_message %}
+        <p style="color: red;">{{ error_message }}</p>
+    {% endif %}
+
+    <form action="{% url 'logout' %}" method="post" style="margin-top: 20px;">
+        {% csrf_token %}
+        <button type="submit">Logout</button>
+    </form>
+</body>
+</html>

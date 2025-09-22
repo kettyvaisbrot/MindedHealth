@@ -1,190 +1,93 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Home</title>
-    <style>
-        body {
-            font-family: Arial, sans-serif;
-            margin: 0;
-            padding: 0;
-            background-color: #f4f4f4;
-        }
-        .container {
-            max-width: 900px;
-            margin: 0 auto;
-            padding: 20px;
-            background: #fff;
-            border-radius: 8px;
-            box-shadow: 0 0 10px rgba(0,0,0,0.1);
-        }
-        h2 {
-            color: #333;
-        }
-        p {
-            margin: 0 0 10px;
-        }
-        a {
-            text-decoration: none;
-        }
-        button {
-            background-color: #007bff;
-            color: #fff;
-            border: none;
-            padding: 10px 20px;
-            margin: 5px;
-            border-radius: 4px;
-            cursor: pointer;
-            font-size: 16px;
-        }
-        button:hover {
-            background-color: #0056b3;
-        }
-        #search-form {
-            margin-top: 20px;
-        }
-        input[type="text"] {
-            padding: 10px;
-            border: 1px solid #ddd;
-            border-radius: 4px;
-            width: calc(100% - 22px);
-            font-size: 16px;
-        }
-        .search-container {
-            display: flex;
-            flex-direction: column;
-        }
-        .search-container button {
-            margin-top: 10px;
-        }
-    </style>
-</head>
-<body>
-    <div class="container">
-        <h2>Home</h2>
-        {% if user.is_authenticated %}
-            <p>Welcome, {{ user.username }}!</p>
-            <form method="POST" action="{% url 'logout' %}">
-                {% csrf_token %}
-                <button type="submit">Logout</button>
-            </form>
-            <p><a href="{% url 'dashboard:dashboard_home' %}"><button>Dashboard</button></a></p>
-            <p><a href="{% url 'insights:ai_insight_page' %}"><button>Insights</button></a></p>
-            <p><a href="{% url 'medications:medications_page' %}"><button>Manage Medications</button></a></p>
-            <button onclick="toggleSearchForm()">What interests you?</button>
+{% extends 'base.html' %}
+
+{% block title %}Home - MindedHealth{% endblock %}
+
+{% block extra_css %}
+<style>
+    .welcome-container {
+        text-align: center;
+        margin-top: 100px;
+    }
+
+    .welcome-container h2 {
+        font-size: 28px;
+        margin-bottom: 20px;
+    }
+
+    .welcome-container p {
+        font-size: 18px;
+        margin-bottom: 30px;
+    }
+
+    .welcome-container .action-buttons {
+        display: flex;
+        flex-direction: column;
+        gap: 15px;
+        align-items: center;
+        justify-content: center;
+    }
+
+    .welcome-container .action-buttons button {
+        background-color: #007bff;
+        color: white;
+        border: none;
+        padding: 12px 25px;
+        border-radius: 5px;
+        font-size: 16px;
+        cursor: pointer;
+        min-width: 200px;
+    }
+
+    .welcome-container .action-buttons button:hover {
+        background-color: #0056b3;
+    }
+
+    /* Search form styling */
+    .search-container {
+        margin-top: 10px;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container">
+    {% if user.is_authenticated and user.role == 'patient' %}
+        <div class="welcome-container">
+            <h2>Welcome, {{ user.username }}!</h2>
+            <p>What would you like to do today?</p>
+            <div class="action-buttons">
+                <a href="{% url 'dashboard:dashboard_home' %}"><button>Document</button></a>
+                <a href="{% url 'insights:ai_insight_page' %}"><button>See Insights</button></a>
+                <a href="{% url 'medications:medications_page' %}"><button>Manage Medications</button></a>
+                <button onclick="toggleSearchForm()">What interests you?</button>
+            </div>
+
             <div id="search-form" style="display:none;" class="search-container">
                 <form action="{% url 'what_interested_you:search' %}" method="get">
                     <input type="text" name="q" placeholder="Search mental health topics" required>
                     <button type="submit">Search</button>
                 </form>
             </div>
-            
-            <script>
-                function toggleSearchForm() {
-                    var searchForm = document.getElementById('search-form');
-                    if (searchForm.style.display === 'none' || searchForm.style.display === '') {
-                        searchForm.style.display = 'block';  // Show the form
-                    } else {
-                        searchForm.style.display = 'none';  // Hide the form
-                    }
+        </div>
+
+        <script>
+            function toggleSearchForm() {
+                var searchForm = document.getElementById('search-form');
+                if (searchForm.style.display === 'none' || searchForm.style.display === '') {
+                    searchForm.style.display = 'block';
+                } else {
+                    searchForm.style.display = 'none'; 
                 }
-            </script>
-
-        {% else %}
-            <p>Welcome, guest!</p>
-            <p><a href="{% url 'login' %}"><button>Login</button></a></p>
-            <p><a href="{% url 'register' %}"><button>Register</button></a></p>
-        {% endif %}
-    </div>
-    <!-- Warning Modal -->
-    <div id="logoutWarning" style="display: none; position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); padding: 20px; border: 1px solid #ccc; background: #fff; z-index: 1000; text-align: center;">
-        <p>You will be logged out in 30 seconds due to inactivity.</p>
-        <button onclick="stayOnSite()">Stay Logged In</button>
-        <button onclick="logOut()">Log Out</button>
-    </div>
-
-    <script>
-        const isAuthenticated = {{ is_authenticated|yesno:"true,false" }};
-
-        let warningTimer, logoutTimer;
-        const timeoutDuration = 120000; // 2 minutes
-        const logoutUrl = "/logout/";
-
-        if (isAuthenticated) {
-            // Function to show the warning modal
-            function showWarning() {
-                document.getElementById("logoutWarning").style.display = "block";
             }
-
-            // Function to stay logged in
-            function stayOnSite() {
-                document.getElementById("logoutWarning").style.display = "none";
-                // Reset session or activity timers
-                fetch('/keep-alive/', { method: 'GET' })
-                    .then(response => console.log('Session extended'))
-                    .catch(error => console.error('Error extending session:', error));
-                // Restart the warning timer
-                startWarningTimer();
-            }
-
-            // Function to log out the user
-            function logOut() {
-                window.location.href = logoutUrl;
-            }
-
-            // Function to start the warning timer
-            function startWarningTimer() {
-                warningTimer = setTimeout(showWarning, 90000); // Show warning 30 seconds before logout
-            }
-
-            // Function to log out the user automatically
-            function logoutUser() {
-                fetch(logoutUrl, {
-                    method: 'POST', 
-                    headers: {
-                        'X-CSRFToken': getCookie('csrftoken'), 
-                    }
-                })
-                .then(response => {
-                    if (response.redirected) {
-                        window.location.href = response.url; 
-                    }
-                })
-                .catch(error => console.error('Logout error:', error));
-            }
-
-            // Function to get CSRF token from cookies
-            function getCookie(name) {
-                let cookieValue = null;
-                if (document.cookie && document.cookie !== '') {
-                    const cookies = document.cookie.split(';');
-                    for (let i = 0; i < cookies.length; i++) {
-                        const cookie = cookies[i].trim();
-                        if (cookie.substring(0, name.length + 1) === (name + '=')) {
-                            cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
-                            break;
-                        }
-                    }
-                }
-                return cookieValue;
-            }
-
-            // Reset the logout timer on user activity
-            function resetTimeout() {
-                clearTimeout(logoutTimer);
-                logoutTimer = setTimeout(logoutUser, timeoutDuration);
-            }
-
-            // Start the timers only for authenticated users
-            startWarningTimer();
-            logoutTimer = setTimeout(logoutUser, timeoutDuration);
-
-            // Listen for activity to reset the timers
-            document.addEventListener('mousemove', resetTimeout);
-            document.addEventListener('keypress', resetTimeout);
-        }
-    </script>
-    
-</body>
-</html>
+        </script>
+    {% else %}
+        <p class="welcome-text">
+            Welcome to <strong>MindedHealth</strong>, a safe and supportive space where you can
+            track your mental well-being, gain valuable insights, and take small steps toward a
+            healthier, more balanced life.<br><br>
+            To understand more about our work and how MindedHealth can help you, please
+            <a href="{% url 'about_us' %}">click here</a> to visit our About page.
+        </p>
+    {% endif %}
+</div>
+{% endblock %}
