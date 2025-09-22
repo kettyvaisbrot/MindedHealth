@@ -11,4 +11,4 @@ my_statistics/
 *.tfstate
 *.tfstate.backup
 *.tfvars
-.terraform.lock.hcl
+.terraform.lock.hclterraform/.terraform/
