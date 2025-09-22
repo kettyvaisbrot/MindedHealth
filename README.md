@@ -1,78 +1,61 @@
 # MindedHealth
 
-MindedHealth is a mental health tracking and management application. It helps users document various aspects of their mental health, such as sleep, exercise, food intake, meetings, and more. The app provides insights and AI-powered recommendations based on the user's data. Additionally, it features anonymous chat for communication and the option for family members to track and support their loved ones' mental health journey.
+![MindedHealth Logo](docs/logo.png)
 
-## Features
+MindedHealth is a comprehensive **mental healthcare web application** designed to help users track, document, and analyze their daily activities, habits, and mental health trends. The platform also provides AI-driven insights and recommendations based on users’ data, enabling more proactive mental health management.
 
-- **Mental Health Tracking**: Track daily activities such as sleep, food, exercise, mood, and more.
-- **AI-powered Recommendations**: Get personalized suggestions to improve your mental health based on the tracked data.
-- **Chat Functionality**: Engage in anonymous conversations with family members or support groups.
-- **Data Security**: The app follows best practices to ensure user data privacy and is compliant with regulations like HIPAA.
-- **Scalable & Secure**: Built using technologies like Django, Docker, Kubernetes, AWS, and PostgreSQL to provide a secure, scalable, and high-performance experience.
+---
 
-## Tech Stack
+## **Features**
 
-- **Backend**: Python, Django, Django REST Framework
-- **Database**: MySQL and sqlite
-- **Task Queue**: Celery
-- **Deployment**: Docker, Kubernetes (AWS EKS)
+- **Dashboard & Activity Tracking**
+  - Log daily activities: sleep, exercise, meals, meetings, and seizures.
+  - Keep detailed documentation for each category.
 
-## Installation
+- **AI Microservice Insights**
+  - Analyze recorded data and provide actionable insights.
+  - Fully automated suggestions and personalized recommendations.
 
-1. Clone the repository:
-    ```
-    git clone https://github.com/kettyvaisbrot/MindedHealth.git
-    ```
+- **Family Access**
+  - Family members can view and contribute to certain activity logs.
+  - Separate family chat for collaboration and support.
 
-2. Navigate to the project directory:
-    ```
-    cd MindedHealth
-    ```
+- **Anonymous Chat**
+  - Users can communicate anonymously with peers in a safe environment.
 
-3. Install the required dependencies:
-    ```
-    pip install -r requirements.txt
-    ```
+- **Authentication & Security**
+  - OAuth2 / JWT authentication.
+  - Secure storage and encryption of user data (HIPAA-ready).
 
-4. Set up the database and run migrations:
-    ```
-    python manage.py migrate
-    ```
+- **Modern Tech Stack**
+  - Django REST Framework, PostgreSQL, Redis, Celery
+  - Docker & Kubernetes deployment
+  - CI/CD automation with GitHub Actions
+  - Event-driven architecture with monitoring via Prometheus and Grafana
 
-5. Start the development server:
-    ```
-    python manage.py runserver
-    ```
+---
 
-6. Access the app in your browser at `http://127.0.0.1:8000/`.
+## **Visit MindedHealth**
 
-## Docker Setup
+Currently, MindedHealth can be deployed locally or on **AWS EKS** using Docker and Kubernetes.
 
-1. Build the Docker image:
-    ```
-    docker build -t mindedhealth .
-    ```
+- **Local Development:** See instructions below.
+- **Cloud Deployment:** Access the app via your AWS EKS LoadBalancer URL or your custom domain after deployment.
 
-2. Run the Docker container:
-    ```
-    docker run -p 8000:8000 mindedhealth
-    ```
+---
 
-## Kubernetes Setup (for AWS EKS)
+## **Local Development Setup**
 
-1. Set up AWS EKS cluster and configure `kubectl`.
+### **Prerequisites**
 
-2. Deploy the app using the following commands:
-    ```
-    kubectl apply -f k8s/
-    ```
+- Python 3.11+
+- Docker & Docker Compose
+- Node.js (if using frontend build tools)
+- PostgreSQL (or Dockerized Postgres)
+- Git
 
-## License
+---
 
-This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
-
-## Contact
-
-For any questions or inquiries, feel free to reach out:
-- **Email**: kettyvaisbrot@gmail.com    
-- **GitHub**: [kettyvaisbrot](https://github.com/kettyvaisbrot)
+### **Clone the Repository**
+git clone https://github.com/kettyvaisbrot/MindedHealth.git
+cd MindedHealth
