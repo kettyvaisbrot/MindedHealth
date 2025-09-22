@@ -3,3 +3,5 @@ db.sqlite3
 venv/
 github_ec2
 github_ec2.pub
+chatbot/
+my_statistics/

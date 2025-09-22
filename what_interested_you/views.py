@@ -6,11 +6,10 @@ from nltk.tokenize import word_tokenize
 from nltk.corpus import stopwords
 import os
 
-# Initialize lemmatizer and stopwords
+
 lemmatizer = WordNetLemmatizer()
 stop_words = set(stopwords.words('english'))
 
-# Define a comprehensive synonyms dictionary
 synonyms = {
     'treatments': ['treatment', 'therapy', 'medication', 'intervention', 'medications'],
     'symptoms': ['symptom', 'sign', 'indication', 'manifestation'],
@@ -37,22 +36,15 @@ def search_view(request):
 
     if query:
         results = fetch_search_results(query)
-
-        # Filter results based on user interest
         if interest:
             interest_synonyms = synonyms.get(interest.lower(), [interest.lower()])
             filtered_results = []
 
             for result in results:
-                # Extract title and snippet from result
                 title = result.get('title', '').lower()
                 snippet = result.get('snippet', '').lower()
-
-                # Lemmatize and tokenize title and snippet
                 title_tokens = [lemmatizer.lemmatize(word) for word in word_tokenize(title) if word not in stop_words]
                 snippet_tokens = [lemmatizer.lemmatize(word) for word in word_tokenize(snippet) if word not in stop_words]
-
-                # Check for the presence of any synonym in the lemmatized tokens
                 if any(synonym in title_tokens or synonym in snippet_tokens for synonym in interest_synonyms):
                     filtered_results.append(result)
 

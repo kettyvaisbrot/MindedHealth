@@ -1,0 +1,24 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>{{ patient_profile.user.username }} - Detail</title>
+</head>
+<body>
+    <h1>{{ patient_profile.user.username }}</h1>
+
+    <p>Choose whose view you want:</p>
+    
+    <a href="{% url 'patient_detail' patient_profile.user.id %}">
+        <button>Patient</button>
+    </a>
+
+    {% if patient_profile.family_member %}
+        <a href="{% url 'family_dashboard' patient_profile.family_member.user.id %}">
+            <button>Family Member</button>
+        </a>
+    {% else %}
+        <p>No family member assigned yet.</p>
+    {% endif %}
+</body>
+</html>

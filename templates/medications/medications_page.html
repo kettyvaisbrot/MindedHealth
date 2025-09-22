@@ -53,6 +53,26 @@
     th {
       background-color: #f2f2f2;
     }
+    /* Form styling */
+    #med-form-container {
+      margin-top: 20px;
+    }
+    .form-row {
+      display: flex;
+      align-items: center;
+      margin-bottom: 10px;
+    }
+    .form-row label {
+      width: 180px;
+      margin-right: 10px;
+      text-align: right;
+    }
+    .form-row input {
+      flex: 1;
+      padding: 6px;
+      border: 1px solid #ddd;
+      border-radius: 4px;
+    }
   </style>
 </head>
 <body>
@@ -84,23 +104,27 @@
       <h2 id="form-title">Add Medication</h2>
       <form id="med-form">
         <input type="hidden" id="med-id" />
-        <label>
-          Name:<br />
+
+        <div class="form-row">
+          <label for="name">Name:</label>
           <input type="text" id="name" required />
-        </label>
-        <label>
-          Dose:<br />
+        </div>
+
+        <div class="form-row">
+          <label for="dose">Dose:</label>
           <input type="text" id="dose" required />
-        </label>
-        <label>
-          Times per day:<br />
+        </div>
+
+        <div class="form-row">
+          <label for="times_per_day">Times per day:</label>
           <input type="number" id="times_per_day" min="1" required />
-        </label>
-        <label>
-          Scheduled times (comma separated, e.g. 08:00,14:00):<br />
-          <input type="text" id="dose_times" required />
-        </label>
-        <br />
+        </div>
+
+        <div class="form-row">
+          <label for="dose_times">Scheduled times:</label>
+          <input type="text" id="dose_times" placeholder="e.g. 08:00,14:00" required />
+        </div>
+
         <button type="submit">Save</button>
         <button type="button" id="cancel-btn">Cancel</button>
       </form>
@@ -110,7 +134,6 @@
 <script>
   const apiBaseUrl = '/medications/api/medications/';
 
-  // CSRF token helper (Django sets csrftoken cookie)
   function getCookie(name) {
     let cookieValue = null;
     if (document.cookie && document.cookie !== '') {
@@ -127,7 +150,6 @@
   }
   const csrftoken = getCookie('csrftoken');
 
-  // Fetch and show all medications (with pagination support)
   function loadMedications() {
     fetch(apiBaseUrl, {
       headers: { 'X-CSRFToken': csrftoken },
@@ -137,7 +159,7 @@
     .then(data => {
       const tbody = document.getElementById('medications-body');
       tbody.innerHTML = '';
-      const meds = data.results || []; // use results array
+      const meds = data.results || [];
       meds.forEach(med => {
         const tr = document.createElement('tr');
         tr.innerHTML = `
@@ -157,7 +179,6 @@
     });
   }
 
-  // Show add medication form
   document.getElementById('add-med-btn').addEventListener('click', () => {
     document.getElementById('form-title').innerText = 'Add Medication';
     document.getElementById('med-id').value = '';
@@ -169,7 +190,6 @@
     document.getElementById('medications-table').style.display = 'none';
   });
 
-  // Handle form submit for add/edit
   document.getElementById('med-form').addEventListener('submit', (e) => {
     e.preventDefault();
     const id = document.getElementById('med-id').value;
@@ -179,14 +199,12 @@
       times_per_day: parseInt(document.getElementById('times_per_day').value),
       dose_times: document.getElementById('dose_times').value.split(',').map(s => s.trim())
     };
-
     let url = apiBaseUrl;
     let method = 'POST';
     if (id) {
       url += id + '/';
       method = 'PUT';
     }
-
     fetch(url, {
       method: method,
       headers: {
@@ -196,15 +214,11 @@
       body: JSON.stringify(payload),
       credentials: 'same-origin'
     }).then(res => {
-      if (res.ok) {
-        loadMedications();
-      } else {
-        alert('Failed to save medication.');
-      }
+      if (res.ok) loadMedications();
+      else alert('Failed to save medication.');
     });
   });
 
-  // Edit medication: fetch med details and populate form
   function editMedication(id) {
     fetch(apiBaseUrl + id + '/', {
       headers: { 'X-CSRFToken': csrftoken },
@@ -223,7 +237,6 @@
     });
   }
 
-  // Delete medication
   function deleteMedication(id) {
     if (!confirm('Are you sure you want to delete this medication?')) return;
     fetch(apiBaseUrl + id + '/', {
@@ -231,24 +244,18 @@
       headers: { 'X-CSRFToken': csrftoken },
       credentials: 'same-origin'
     }).then(res => {
-      if (res.ok) {
-        loadMedications();
-      } else {
-        alert('Failed to delete medication.');
-      }
+      if (res.ok) loadMedications();
+      else alert('Failed to delete medication.');
     });
   }
 
-  // Cancel form button
   document.getElementById('cancel-btn').addEventListener('click', () => {
     document.getElementById('med-form-container').style.display = 'none';
     document.getElementById('medications-table').style.display = 'table';
   });
 
-  // Initial load
   loadMedications();
 </script>
-
 
 </body>
 </html>
