@@ -26,7 +26,8 @@ STATIC_URL = "static/"
 # =======================
 DEBUG = os.getenv("DJANGO_DEBUG", "True").lower() in ["true", "1"]
 
-ALLOWED_HOSTS = os.getenv("DJANGO_ALLOWED_HOSTS", "127.0.0.1,localhost").split(",")
+ALLOWED_HOSTS = os.getenv("DJANGO_ALLOWED_HOSTS", "*").split(",")
+
 
 SECRET_KEY = os.getenv("DJANGO_SECRET_KEY")
 
@@ -52,10 +53,8 @@ EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
 EMAIL_HOST = 'smtp.gmail.com'
 EMAIL_PORT = 587
 EMAIL_USE_TLS = True
-
 EMAIL_HOST_USER = config('EMAIL_HOST_USER')
 EMAIL_HOST_PASSWORD = config('EMAIL_HOST_PASSWORD')
-
 DEFAULT_FROM_EMAIL = f"MindedHealth <{EMAIL_HOST_USER}>"
 
 # =======================
@@ -172,38 +171,27 @@ TEMPLATES = [
 # =======================
 # DATABASE
 # =======================
-if os.getenv("USE_LOCAL_DB", "false").lower() == "true":
-    print("🟢 Using local SQLite database")
+if DEBUG:
+    # Local development uses SQLite
     DATABASES = {
         'default': {
             'ENGINE': 'django.db.backends.sqlite3',
-            'NAME': BASE_DIR / 'db.sqlite3',
-        }
-    }
-elif os.getenv("USE_TEST_DB", "false").lower() == "true":
-    print("✅ Using test database")
-    DATABASES = {
-        'default': {
-            'ENGINE': 'django.db.backends.postgresql',
-            'NAME': os.getenv('POSTGRES_DB', 'test_mindedhealth'),
-            'USER': os.getenv('POSTGRES_USER', 'testuser'),
-            'PASSWORD': os.getenv('POSTGRES_PASSWORD', 'testpass'),
-            'HOST': os.getenv('POSTGRES_HOST', 'postgres'),
-            'PORT': os.getenv('POSTGRES_PORT', '5432'),
+            'NAME': BASE_DIR / "db.sqlite3",
         }
     }
 else:
-    print("📦 Using prod-like database")
+    # Production (EKS) uses RDS PostgreSQL
     DATABASES = {
         'default': {
             'ENGINE': 'django.db.backends.postgresql',
-            'NAME': os.getenv('DB_NAME', 'mindedhealth-db'),
-            'USER': os.getenv('DB_USER', 'mindeduser'),
-            'PASSWORD': os.getenv('DB_PASSWORD', 'mindedpass123'),
-            'HOST': os.getenv('DB_HOST', 'postgres'),
+            'NAME': os.getenv('DB_NAME', 'mindedhealth'),
+            'USER': os.getenv('DB_USER', 'mindedhealth_user'),
+            'PASSWORD': os.getenv('DB_PASSWORD', ''),
+            'HOST': os.getenv('DB_HOST', 'localhost'),
             'PORT': os.getenv('DB_PORT', '5432'),
         }
     }
+
 
 # =======================
 # PASSWORD VALIDATION
@@ -218,9 +206,10 @@ AUTH_PASSWORD_VALIDATORS = [
 # =======================
 # SESSIONS
 # =======================
-SESSION_COOKIE_AGE = 120
-SESSION_EXPIRE_AT_BROWSER_CLOSE = True
+SESSION_COOKIE_AGE = 60*60
+SESSION_EXPIRE_AT_BROWSER_CLOSE = False
 SESSION_ENGINE = "django.contrib.sessions.backends.cache"
+SESSION_SAVE_EVERY_REQUEST = True
 SESSION_CACHE_ALIAS = "default"
 
 # =======================

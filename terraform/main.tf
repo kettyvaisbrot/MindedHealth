@@ -1,66 +1,153 @@
-terraform {
-  required_version = ">= 1.4.0"
+#######################
+# VPC (network layer) #
+#######################
 
-  required_providers {
-    aws = {
-      source  = "hashicorp/aws"
-      version = ">= 4.0"
-    }
-    kubernetes = {
-      source  = "hashicorp/kubernetes"
-      version = ">= 2.0"
-    }
-  }
-}
-
-provider "aws" {
-  region = var.region
-}
-
-locals {
-  cluster_version = "1.28"
-}
-
-# Create VPC
 module "vpc" {
   source  = "terraform-aws-modules/vpc/aws"
-  version = "4.0.2"
+  version = "~> 5.0"
 
-  name                 = "mindedhealth-vpc"
-  cidr                 = var.vpc_cidr
-  azs                  = ["${var.region}a", "${var.region}b", "${var.region}c"]
-  private_subnets      = ["10.0.1.0/24", "10.0.2.0/24", "10.0.3.0/24"]
-  public_subnets       = ["10.0.101.0/24", "10.0.102.0/24", "10.0.103.0/24"]
+  name = "${var.project_name}-vpc"
+  cidr = "10.0.0.0/16"
+
+  azs = [
+    "${var.aws_region}a",
+    "${var.aws_region}b"
+  ]
+
+  public_subnets = [
+    "10.0.1.0/24",
+    "10.0.2.0/24"
+  ]
+
+  private_subnets = [
+    "10.0.11.0/24",
+    "10.0.12.0/24"
+  ]
+
   enable_nat_gateway   = true
   single_nat_gateway   = true
+  enable_dns_hostnames = true
+  enable_dns_support   = true
 }
 
-# Create EKS cluster
+#############
+# EKS (k8s) #
+#############
+
 module "eks" {
-  source          = "terraform-aws-modules/eks/aws"
-  version         = "21.3.1"
+  source  = "terraform-aws-modules/eks/aws"
+  version = "~> 20.0"
 
-  cluster_name    = var.cluster_name
-  cluster_version = local.cluster_version
-  vpc_id          = module.vpc.vpc_id
-  subnets         = module.vpc.private_subnets
+  cluster_name    = "${var.project_name}-eks"
+  cluster_version = var.eks_cluster_version
 
-  node_groups = {
-    default = {
-      desired_capacity = var.desired_capacity
-      max_capacity     = var.max_capacity
-      instance_type    = var.node_group_instance_type
+  cluster_endpoint_public_access  = true
+  cluster_endpoint_private_access = true
+
+  # ALLOW your laptop to connect to kube API
+  cluster_endpoint_public_access_cidrs = ["0.0.0.0/0"]
+
+  vpc_id     = module.vpc.vpc_id
+  subnet_ids = module.vpc.private_subnets
+
+  enable_irsa = true
+  access_entries = {
+    ketty = {
+      principal_arn     = "arn:aws:iam::339712948392:user/ketty"
+      kubernetes_groups = []
+
+      policy_associations = {
+        cluster_admin = {
+          policy_arn = "arn:aws:eks::aws:cluster-access-policy/AmazonEKSClusterAdminPolicy"
+
+          access_scope = {
+            type = "cluster"
+          }
+        }
+      }
     }
+  }
+
+  eks_managed_node_groups = {
+    default = {
+      desired_size = var.eks_desired_capacity
+      max_size     = var.eks_desired_capacity + 1
+      min_size     = 1
+
+      instance_types = [var.eks_node_instance_type]
+    }
+  }
+
+  tags = {
+    Project = var.project_name
   }
 }
 
-# Kubernetes provider (connects to EKS)
-provider "kubernetes" {
-  host                   = module.eks.cluster_endpoint
-  cluster_ca_certificate = base64decode(module.eks.cluster_certificate_authority_data)
-  token                  = data.aws_eks_cluster_auth.cluster.token
+
+#####################
+# RDS (PostgreSQL)  #
+#####################
+
+# Security group for RDS – allow only from EKS worker nodes
+resource "aws_security_group" "rds_sg" {
+  name        = "${var.project_name}-rds-sg"
+  description = "Allow Postgres access from EKS nodes"
+  vpc_id      = module.vpc.vpc_id
+
+  ingress {
+    description = "Postgres from EKS worker nodes"
+    from_port   = 5432
+    to_port     = 5432
+    protocol    = "tcp"
+    security_groups = [
+      module.eks.node_security_group_id
+    ]
+  }
+
+  egress {
+    from_port   = 0
+    to_port     = 0
+    protocol    = "-1"
+    cidr_blocks = ["0.0.0.0/0"]
+  }
+
+  tags = {
+    Name    = "${var.project_name}-rds-sg"
+    Project = var.project_name
+  }
 }
 
-data "aws_eks_cluster_auth" "cluster" {
-  name = module.eks.cluster_id
+# RDS subnet group uses private subnets
+resource "aws_db_subnet_group" "rds_subnets" {
+  name       = "${var.project_name}-rds-subnet-group"
+  subnet_ids = module.vpc.private_subnets
+
+  tags = {
+    Name    = "${var.project_name}-rds-subnet-group"
+    Project = var.project_name
+  }
+}
+
+resource "aws_db_instance" "postgres" {
+  identifier = "${var.project_name}-postgres"
+
+  engine            = "postgres"
+  engine_version    = "15"
+  instance_class    = "db.t3.micro"
+  allocated_storage = 20
+
+  username = var.db_username
+  password = var.db_password
+  db_name  = var.db_name
+
+  db_subnet_group_name   = aws_db_subnet_group.rds_subnets.name
+  vpc_security_group_ids = [aws_security_group.rds_sg.id]
+
+  publicly_accessible = false
+  skip_final_snapshot = true
+
+  tags = {
+    Name    = "${var.project_name}-postgres"
+    Project = var.project_name
+  }
 }

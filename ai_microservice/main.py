@@ -1,23 +1,21 @@
 from fastapi import FastAPI, HTTPException
 from pydantic import BaseModel
-import openai
+from openai import OpenAI
 import os
-from dotenv import load_dotenv
 
-load_dotenv()
-
-openai.api_key = os.getenv("OPENAI_API_KEY")
+# Initialize OpenAI client (reads OPENAI_API_KEY automatically)
+client = OpenAI()
 
 app = FastAPI()
 
 class PromptInput(BaseModel):
     prompt: str
 
-@app.post("/generate-insight/")
+@app.post("/generate-insight")
 def generate_insight(data: PromptInput):
     try:
-        response = openai.chat.completions.create(
-            model="gpt-4o",
+        response = client.chat.completions.create(
+            model="gpt-4o-mini", 
             messages=[
                 {"role": "system", "content": "You are a compassionate mental health assistant."},
                 {"role": "user", "content": data.prompt},
@@ -25,6 +23,9 @@ def generate_insight(data: PromptInput):
             max_tokens=700,
             temperature=0.7,
         )
-        return {"insight": response.choices[0].message.content.strip()}
+
+        content = response.choices[0].message.content
+        return {"insight": content.strip()}
+
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))

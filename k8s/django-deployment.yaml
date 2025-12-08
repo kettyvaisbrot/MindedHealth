@@ -1,0 +1,56 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: django-app
+  labels:
+    app: django
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: django
+  template:
+    metadata:
+      labels:
+        app: django
+    spec:
+      containers:
+        - name: django-app
+          image: kettyvaisbrot/mindedhealth-django:v5
+          imagePullPolicy: Always
+
+          ports:
+            - containerPort: 8000
+          resources:
+            requests:
+              cpu: "100m"
+              memory: "256Mi"
+            limits:
+              cpu: "500m"
+              memory: "512Mi"
+
+          env:
+            - name: DJANGO_ALLOWED_HOSTS
+              value: "*,a919efb57cd1347cb95609d34137c97f-1434627449.us-east-1.elb.amazonaws.com"
+
+            - name: REDIS_HOST
+              value: "redis"
+
+            - name: DB_HOST
+              value: "mindedhealth-postgres.c30a6w0247um.us-east-1.rds.amazonaws.com"
+            - name: DB_NAME
+              value: "mindedhealth"
+            - name: DB_USER
+              value: "mindedhealth_user"
+            - name: DB_PASSWORD
+              value: "super-secure-password"
+            - name: DB_PORT
+              value: "5432"
+
+            - name: EMAIL_HOST_USER
+              value: "kettyvaisbrot@gmail.com"
+            - name: EMAIL_HOST_PASSWORD
+              value: "iczb buab clur axtx"
+
+            - name: AI_SERVICE_URL
+              value: "http://ai-microservice:8001"

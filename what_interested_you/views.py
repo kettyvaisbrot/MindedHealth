@@ -6,9 +6,9 @@ from nltk.tokenize import word_tokenize
 from nltk.corpus import stopwords
 import os
 
-
+# DO NOT LOAD STOPWORDS HERE!!
+STOP_WORDS = None
 lemmatizer = WordNetLemmatizer()
-stop_words = set(stopwords.words('english'))
 
 synonyms = {
     'treatments': ['treatment', 'therapy', 'medication', 'intervention', 'medications'],
@@ -16,12 +16,31 @@ synonyms = {
     'tips': ['tip', 'advice', 'suggestion', 'recommendation']
 }
 
+def get_stop_words():
+    """
+    Load stopwords ONLY when first needed.
+    Never at import time.
+    Safe for Django migrations and Kubernetes.
+    """
+    global STOP_WORDS
+    if STOP_WORDS is None:
+        try:
+            STOP_WORDS = set(stopwords.words("english"))
+        except LookupError:
+            # If stopwords are missing, download at runtime
+            nltk.download('stopwords')
+            STOP_WORDS = set(stopwords.words("english"))
+    return STOP_WORDS
+
 
 def fetch_search_results(query):
-
     GOOGLE_SEARCH_API_KEY = os.getenv('GOOGLE_SEARCH_API_KEY')
     GOOGLE_SEARCH_CSE_ID = os.getenv('GOOGLE_SEARCH_CSE_ID')
-    url = f'https://www.googleapis.com/customsearch/v1?q={query}&key={GOOGLE_SEARCH_API_KEY}&cx={GOOGLE_SEARCH_CSE_ID}'
+
+    url = (
+        f'https://www.googleapis.com/customsearch/v1?q={query}'
+        f'&key={GOOGLE_SEARCH_API_KEY}&cx={GOOGLE_SEARCH_CSE_ID}'
+    )
 
     response = requests.get(url)
     if response.status_code == 200:
@@ -29,13 +48,17 @@ def fetch_search_results(query):
     else:
         return []
 
+
 def search_view(request):
     query = request.GET.get('q', '')
     interest = request.GET.get('interest', '')
+
+    stop_words = get_stop_words()
     results = []
 
     if query:
         results = fetch_search_results(query)
+
         if interest:
             interest_synonyms = synonyms.get(interest.lower(), [interest.lower()])
             filtered_results = []
@@ -43,9 +66,23 @@ def search_view(request):
             for result in results:
                 title = result.get('title', '').lower()
                 snippet = result.get('snippet', '').lower()
-                title_tokens = [lemmatizer.lemmatize(word) for word in word_tokenize(title) if word not in stop_words]
-                snippet_tokens = [lemmatizer.lemmatize(word) for word in word_tokenize(snippet) if word not in stop_words]
-                if any(synonym in title_tokens or synonym in snippet_tokens for synonym in interest_synonyms):
+
+                title_tokens = [
+                    lemmatizer.lemmatize(word)
+                    for word in word_tokenize(title)
+                    if word not in stop_words
+                ]
+
+                snippet_tokens = [
+                    lemmatizer.lemmatize(word)
+                    for word in word_tokenize(snippet)
+                    if word not in stop_words
+                ]
+
+                if any(
+                    syn in title_tokens or syn in snippet_tokens
+                    for syn in interest_synonyms
+                ):
                     filtered_results.append(result)
 
             results = filtered_results
@@ -55,4 +92,5 @@ def search_view(request):
         'query': query,
         'interest': interest
     }
+
     return render(request, 'search_results.html', context)

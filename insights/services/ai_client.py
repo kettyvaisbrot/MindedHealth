@@ -1,10 +1,16 @@
+import os
 import requests
 
-def get_ai_insight(prompt):
+AI_SERVICE_URL = os.getenv("AI_SERVICE_URL", "http://ai-microservice:8001")
+
+def get_ai_insight(prompt: str) -> str:
     try:
-        response = requests.post("http://localhost:8001/generate-insight/", json={"prompt": prompt})
-        if response.status_code == 200:
-            return response.json().get("insight", "")
-        return f"AI service error: {response.status_code} {response.text}"
+        response = requests.post(
+            f"{AI_SERVICE_URL}/generate-insight",
+            json={"prompt": prompt},
+            timeout=15
+        )
+        response.raise_for_status()
+        return response.json().get("insight", "")
     except Exception as e:
-        return f"Failed to contact AI service: {str(e)}"
+        return f"AI service unavailable: {str(e)}"

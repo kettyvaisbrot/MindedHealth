@@ -1,0 +1,38 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: ai-microservice
+  labels:
+    app: ai-microservice
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: ai-microservice
+  template:
+    metadata:
+      labels:
+        app: ai-microservice
+    spec:
+      containers:
+        - name: ai-microservice
+          image: kettyvaisbrot/mindedhealth-ai:v31
+          imagePullPolicy: Always
+          ports:
+            - containerPort: 8001
+
+          # Required for HPA to calculate CPU % correctly
+          resources:
+            requests:
+              cpu: "80m"
+              memory: "128Mi"
+            limits:
+              cpu: "300m"
+              memory: "256Mi"
+
+          env:
+            - name: OPENAI_API_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: openai-secret
+                  key: OPENAI_API_KEY

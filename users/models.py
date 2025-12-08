@@ -34,7 +34,6 @@ class PatientProfile(models.Model):
 
 class FamilyMemberProfile(models.Model):
     user = models.OneToOneField(User, on_delete=models.CASCADE)
-    # Each patient can have only one family member
     related_patient = models.OneToOneField(
         PatientProfile,
         on_delete=models.CASCADE,
