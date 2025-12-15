@@ -17,7 +17,18 @@ Including another URLconf
 
 from django.contrib import admin
 from django.urls import path, include, re_path
-from . import views
+from users.views import (
+    home,
+    about,
+    features,
+    register,
+    login_view,
+    custom_logout_view,
+    therapist_page,
+    family_member_page,
+    keep_alive,
+    room,
+)
 from rest_framework import permissions
 from drf_yasg.views import get_schema_view
 from drf_yasg import openapi
@@ -40,22 +51,22 @@ schema_view = get_schema_view(
 urlpatterns = [
     path("admin/", admin.site.urls),
     path("dashboard/", include("dashboard.urls", namespace="dashboard")),
-    path("", views.home, name="home"),
-    path('about/', views.about, name='about_us'),
-    path('features/', views.features, name='features'),
-    path("register/", views.register, name="register"),
-    path("login/", views.login_view, name="login"),
-    path("logout/", views.custom_logout_view, name="logout"),
+    path("", home, name="home"),
+    path('about/', about, name='about_us'),
+    path('features/', features, name='features'),
+    path("register/", register, name="register"),
+    path("login/", login_view, name="login"),
+    path("logout/", custom_logout_view, name="logout"),
     path("medications/", include("medications.urls", namespace="medications")),
     path(
         "my_statistics/",
         include(("my_statistics.urls", "my_statistics"), namespace="my_statistics"),
     ),
-    path("therapist/", views.therapist_page, name="therapist_dashboard"),
-    path("family-member/", views.family_member_page, name="family_member_page"),
+    path("therapist/", therapist_page, name="therapist_dashboard"),
+    path("family-member/", family_member_page, name="family_member_page"),
     path("what_interested_you/", include("what_interested_you.urls")),
-    path("keep-alive/", views.keep_alive, name="keep_alive"),
-    path("chat/<str:room_name>/", login_required(views.room), name="chat_room"),
+    path("keep-alive/", keep_alive, name="keep_alive"),
+    path("chat/<str:room_name>/", login_required(room), name="chat_room"),
     path("chatbot/", include("chatbot.urls")),
     path('swagger/', schema_view.with_ui('swagger', cache_timeout=0), name='schema-swagger-ui'),
     path("insights/", include("insights.urls")),
