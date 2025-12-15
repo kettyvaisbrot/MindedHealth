@@ -25,26 +25,17 @@ STATIC_URL = "static/"
 # SECURITY SETTINGS
 # =======================
 DEBUG = os.getenv("DJANGO_DEBUG", "True").lower() in ["true", "1"]
-
 ALLOWED_HOSTS = os.getenv("DJANGO_ALLOWED_HOSTS", "*").split(",")
-
-
 SECRET_KEY = os.getenv("DJANGO_SECRET_KEY")
-
-# Disable automatic HTTPS redirect for development
 SECURE_SSL_REDIRECT = False
 
-# Cookies don’t require HTTPS in development
 SESSION_COOKIE_SECURE = False
 CSRF_COOKIE_SECURE = False
 
-# HSTS is for production only, disable in dev
 SECURE_HSTS_SECONDS = 0
 SECURE_HSTS_INCLUDE_SUBDOMAINS = False
 SECURE_HSTS_PRELOAD = False
 
-
-# X-Frame-Options can stay for basic clickjacking protection
 X_FRAME_OPTIONS = 'DENY'
 EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
 EMAIL_HOST = 'smtp.gmail.com'
@@ -77,6 +68,7 @@ INSTALLED_APPS = [
     "insights",
     "drf_yasg",
     "rest_framework",
+    "silk",
     "rest_framework.authtoken",
     "chatbot",
     "channels",
@@ -117,7 +109,7 @@ REST_FRAMEWORK = {
 
     # Pagination (avoid large responses)
     'DEFAULT_PAGINATION_CLASS': 'rest_framework.pagination.LimitOffsetPagination',
-    'PAGE_SIZE': 20,  # Default page size
+    'PAGE_SIZE': 20, 
 
     # JSON-only responses (avoid content sniffing issues)
     'DEFAULT_RENDERER_CLASSES': (
@@ -132,6 +124,7 @@ REST_FRAMEWORK = {
 
 
 MIDDLEWARE = [
+    "silk.middleware.SilkyMiddleware",
     "django.middleware.security.SecurityMiddleware",
     "django.contrib.sessions.middleware.SessionMiddleware",
     "MindedHealth.middleware.LogoutOnServerStartMiddleware",
@@ -240,5 +233,5 @@ CACHES = {
 LOGGING = {
     'version': 1,
     'handlers': {'console': {'class': 'logging.StreamHandler'}},
-    'root': {'handlers': ['console'], 'level': 'DEBUG'},
+    'root': {'handlers': ['console'], 'level': "DEBUG" if DEBUG else "INFO"},
 }
