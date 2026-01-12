@@ -1,4 +1,8 @@
 from datetime import datetime
+def v(obj, key, default="N/A"):
+    if isinstance(obj, dict):
+        return obj.get(key, default)
+    return getattr(obj, key, default)
 
 def build_insight_prompt(logs, metrics=None, correlations=None):
     prompt = ""
@@ -7,14 +11,14 @@ def build_insight_prompt(logs, metrics=None, correlations=None):
     if metrics:
         prompt += (
             "🌟 Here are your key achievements for the past 7 days:\n"
-            f"- 🧠 Medication adherence: {metrics['medication_adherence_percent']}%\n"
-            f"- 💊 Missed doses: {metrics['missed_doses']}\n"
-            f"- 🛌 Average sleep: {metrics['avg_sleep_hours']} hours\n"
-            f"- 🌙 Nights waking up: {metrics['nights_awakened']}\n"
-            f"- 🏃‍♂️ Days exercised: {metrics['days_exercised']}\n"
-            f"- 🍽 Skipped meals: {metrics['skipped_meals']}\n"
-            f"- Felt off events: {metrics['felt_off_count']} (avg intensity: {metrics['avg_felt_off_intensity']})\n"
-            f"- 👥 Avg meeting positivity: {metrics['avg_meeting_positivity']}, positive meetings: {metrics['positive_meetings']}\n\n"
+            f"- 🧠 Medication adherence: {metrics.get('medication_adherence_percent', 'N/A')}%\n"
+            f"- 💊 Missed doses: {metrics.get('missed_doses')}\n"
+            f"- 🛌 Average sleep: {metrics.get('avg_sleep_hours')} hours\n"
+            f"- 🌙 Nights waking up: {metrics.get('nights_awakened')}\n"
+            f"- 🏃‍♂️ Days exercised: {metrics.get('days_exercised')}\n"
+            f"- 🍽 Skipped meals: {metrics.get('skipped_meals')}\n"
+            f"- Felt off events: {metrics.get('felt_off_count')} (avg intensity: {metrics.get('avg_felt_off_intensity')})\n"
+            f"- 👥 Avg meeting positivity: {metrics.get('avg_meeting_positivity')}, positive meetings: {metrics.get('positive_meetings')}\n\n"
         )
 
     # 2️⃣ Correlations
@@ -24,20 +28,53 @@ def build_insight_prompt(logs, metrics=None, correlations=None):
 
     # 3️⃣ Structured logs
     prompt += "Here is your activity log for the past 7 days:\n\n"
+
+    def log_day(x):
+        # support both 'date' and 'created_at' shapes
+        return v(x, "date", v(x, "created_at"))
+
     for log in logs.get("food", []):
-        prompt += f"- 🍽 Food on {log.date}: Breakfast={log.breakfast_ate}, Lunch={log.lunch_ate}, Dinner={log.dinner_ate}\n"
+        prompt += (
+            f"- 🍽 Food on {log_day(log)}: "
+            f"Breakfast={v(log, 'breakfast_ate')}, "
+            f"Lunch={v(log, 'lunch_ate')}, "
+            f"Dinner={v(log, 'dinner_ate')}\n"
+        )
+
     for log in logs.get("sport", []):
-        prompt += f"- 🏃‍♂️ Sport on {log.date}: Did sport={log.did_sport}, Type={log.sport_type or log.other_sport}\n"
+        sport_type = v(log, "sport_type", "")
+        other_sport = v(log, "other_sport", "")
+        prompt += (
+            f"- 🏃‍♂️ Sport on {log_day(log)}: "
+            f"Did sport={v(log, 'did_sport')}, "
+            f"Type={sport_type or other_sport or 'N/A'}\n"
+        )
+
     for log in logs.get("sleep", []):
-        prompt += f"- 🛌 Sleep on {log.date}: Slept at {log.went_to_sleep_yesterday}, Woke up at {log.wake_up_time}, Woke up during night={log.woke_up_during_night}\n"
+        prompt += (
+            f"- 🛌 Sleep on {log_day(log)}: "
+            f"Slept at {v(log, 'went_to_sleep_yesterday')}, "
+            f"Woke up at {v(log, 'wake_up_time')}, "
+            f"Woke up during night={v(log, 'woke_up_during_night')}\n"
+        )
+
     for log in logs.get("meetings", []):
-        prompt += f"- 👥 Meetings on {log.date} at {log.time}: Type={log.meeting_type}, Positivity rating={log.positivity_rating}\n"
+        prompt += (
+            f"- 👥 Meetings on {log_day(log)} at {v(log, 'time')}: "
+            f"Type={v(log, 'meeting_type')}, "
+            f"Positivity rating={v(log, 'positivity_rating')}\n"
+        )
+
     for log in logs.get("felt_off", []):
-        if log.had_moment:
+        if v(log, "had_moment", False):
+            duration = v(log, "duration")
+            intensity = v(log, "intensity")
+            description = v(log, "description", "No details provided")
             prompt += (
-                f"- Felt Off on {log.date}: Duration={log.duration or 'N/A'}, "
-                f"Intensity={log.intensity or 'N/A'}, Description='{log.description or 'No details provided'}'\n"
+                f"- Felt Off on {log_day(log)}: "
+                f"Duration={duration}, Intensity={intensity}, Description='{description}'\n"
             )
+
 
     # 4️⃣ Medications summary (explicit names, no rephrasing)
     prompt += "\n🧠 Medication Review\n"
