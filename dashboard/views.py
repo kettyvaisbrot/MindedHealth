@@ -8,7 +8,8 @@ from django.forms import modelform_factory
 from django.contrib.auth.decorators import login_required
 from rest_framework.views import APIView
 from rest_framework.response import Response
-from medications.models import MedicationLog, Medication
+from medications.models import Medication
+from dashboard.models import MedicationIntakeLog
 from django.views.generic import View
 from django.contrib.auth.mixins import LoginRequiredMixin
 from .services.documentation_service import fetch_documentation_for_date
@@ -62,7 +63,7 @@ class CategorySummaryView(APIView):
         model = config.get("model")
 
         if category == "medication" or model is None:
-            logs = MedicationLog.objects.filter(user=request.user, date=today).select_related("medication")
+            logs = MedicationIntakeLog.objects.filter(user=request.user, date=today)
             if not logs.exists():
                 return Response({"redirect": f"/dashboard/{category}/chat"}, status=302)
 
@@ -120,7 +121,7 @@ class CategoryEditView(APIView):
 
         if category == "medication":
             medications = Medication.objects.filter(user=request.user)
-            logs = MedicationLog.objects.filter(user=request.user, date=today)
+            logs = MedicationIntakeLog.objects.filter(user=request.user, date=today)
 
             med_logs = {}
             for med in medications:
@@ -181,7 +182,7 @@ class CategoryEditView(APIView):
                     try:
                         _, med_id, dose_index = key.split("_")
                         med = Medication.objects.get(id=med_id, user=request.user)
-                        MedicationLog.objects.update_or_create(
+                        MedicationIntakeLog.objects.update_or_create(
                             user=request.user,
                             medication=med,
                             date=today,
@@ -231,7 +232,7 @@ class CategoryChatView(APIView):
         edit = get_bool_query_param(request, "edit")
 
         if category == "medication":
-            logs = MedicationLog.objects.filter(user=request.user, date=today).select_related("medication")
+            logs = MedicationIntakeLog.objects.filter(user=request.user, date=today)
             has_logs = logs.exists()
 
             if has_logs and not edit and not force:
@@ -283,7 +284,7 @@ def chat_page(request, category):
         return render(request, "dashboard/404.html", status=404)
 
     if category == "medication":
-        existing_log = MedicationLog.objects.filter(user=user, date=today).first()
+        existing_log = MedicationIntakeLog.objects.filter(user=user, date=today).first()
     else:
         Model = config.get("model")
         existing_log = Model.objects.filter(user=user, date=today).first() if Model else None
@@ -314,7 +315,7 @@ class CategoryChatSubmitView(APIView):
                         try:
                             _, med_id, dose_idx = key.split("_")
                             med = Medication.objects.get(id=med_id, user=user)
-                            MedicationLog.objects.update_or_create(
+                            MedicationIntakeLog.objects.update_or_create(
                                 user=user,
                                 medication=med,
                                 date=today,
@@ -334,7 +335,7 @@ class CategoryChatSubmitView(APIView):
                         time_str = data.get(f"time_{med_id}_{dose_index}")
                         if not time_str:
                             continue
-                        MedicationLog.objects.update_or_create(
+                        MedicationIntakeLog.objects.update_or_create(
                             user=user,
                             medication=med,
                             date=today,
@@ -424,7 +425,7 @@ def log_medication(request, date):
                 logger.error("Error logging medication for user %s: %s", request.user, e)
                 error_message = "An unexpected error occurred. Please try again."
 
-    logs_for_date = MedicationLog.objects.filter(user=request.user, date=date)
+    logs_for_date = MedicationIntakeLog.objects.filter(user=request.user, date=date)
 
     return render(
         request,

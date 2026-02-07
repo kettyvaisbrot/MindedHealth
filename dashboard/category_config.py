@@ -6,7 +6,9 @@ from .models import (
     Meetings,
 )
 from dashboard.services.questions_service import get_felt_off_questions, get_medication_questions
-from medications.models import Medication,MedicationLog
+from medications.models import Medication
+from dashboard.models import MedicationIntakeLog
+
 
 
 CATEGORY_CONFIG = {
@@ -174,7 +176,7 @@ CATEGORY_CONFIG = {
     ]
 },
     'medication': {
-        'model': MedicationLog,
+        'model': MedicationIntakeLog,
         'fields': [],
         'questions': get_medication_questions,
     },

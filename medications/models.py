@@ -18,9 +18,3 @@ class Medication(models.Model):
         return self.name
 
 
-class MedicationLog(models.Model):
-    user = models.ForeignKey(User, on_delete=models.CASCADE)
-    medication = models.ForeignKey(Medication, on_delete=models.CASCADE)
-    date = models.DateField()
-    time_taken = models.TimeField()
-    dose_index = models.IntegerField()

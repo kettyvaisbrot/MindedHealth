@@ -5,7 +5,8 @@ from datetime import datetime, timedelta
 from calendar import month_name
 from dashboard.models import FoodLog, SportLog, SleepingLog, Meetings, SeizureLog
 import calendar
-from medications.models import Medication, MedicationLog
+from medications.models import Medication
+from dashboard.models import MedicationIntakeLog
 from django.http import JsonResponse
 from django.db.models import Count
 from my_statistics.services.statistics_service import calculate_avg_meal_time

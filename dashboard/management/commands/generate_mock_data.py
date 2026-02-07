@@ -10,9 +10,8 @@ from dashboard.models import (
     MeetingType,
     SeizureLog,
     Medication,
-    MedicationLog,
+    MedicationIntakeLog,
 )
-
 
 class Command(BaseCommand):
     help = "Generate mock data for testing"
@@ -103,7 +102,7 @@ class Command(BaseCommand):
         # Generate MedicationLog mock data
         for med in medications:
             for i in range(10):
-                MedicationLog.objects.create(
+                MedicationIntakeLog.objects.create(
                     medication=med,
                     date=today - timedelta(days=i),
                     time_taken=(

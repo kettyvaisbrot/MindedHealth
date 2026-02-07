@@ -1,13 +1,14 @@
 from datetime import datetime, date, time
 from django.utils.timezone import localtime
-from medications.models import MedicationLog, Medication
+from medications.models import Medication
+from dashboard.models import MedicationIntakeLog
 from dashboard.models import FeltOffLog
 
 def get_medication_questions(user):
     today = date.today()
 
     # 🧪 Check if the user already logged any medication today
-    if MedicationLog.objects.filter(user=user, date=today).exists():
+    if MedicationIntakeLog.objects.filter(user=user, date=today).exists():
         questions = [
             {
                 "field": "meds_already_logged",

@@ -1,7 +1,7 @@
 from datetime import timedelta
 from django.utils import timezone
 from dashboard.models import FoodLog, SportLog, SleepingLog, Meetings, FeltOffLog
-from medications.models import MedicationLog
+from dashboard.models import MedicationIntakeLog
 
 def fetch_user_logs(user):
     today = timezone.now().date()
@@ -13,7 +13,7 @@ def fetch_user_logs(user):
         "sleep": SleepingLog.objects.filter(user=user, date__range=(week_ago, today)),
         "meetings": Meetings.objects.filter(user=user, date__range=(week_ago, today)),
         "felt_off": FeltOffLog.objects.filter(user=user, date__range=(week_ago, today)),
-        "medications": MedicationLog.objects.filter(user=user, date__range=(week_ago, today)).select_related("medication"),
+        "medications": MedicationIntakeLog.objects.filter(user=user, date__range=(week_ago, today)).select_related("medication"),
     }
 
     return logs

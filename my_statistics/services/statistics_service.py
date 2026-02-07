@@ -6,7 +6,8 @@ from dashboard.models import FoodLog
 from dashboard.models import Meetings
 from django.db.models import Count
 from dashboard.models import SeizureLog
-from medications.models import MedicationLog, Medication
+from medications.models import Medication
+from dashboard.models import MedicationIntakeLog
 
 
 def calculate_avg_meal_time(user, year, month, meal_type):
@@ -122,7 +123,7 @@ def fetch_medication_statistics(user, year, month):
         first_day_of_next_month = datetime(next_month_year, next_month, 1).date()
         last_day_of_month = first_day_of_next_month - timedelta(days=1)
 
-    medication_logs = MedicationLog.objects.filter(
+    medication_logs = MedicationIntakeLog.objects.filter(
         user=user, date__range=[first_day_of_month, last_day_of_month]
     )
 

@@ -1,8 +1,32 @@
 from django.db import models
 from django.contrib.auth import get_user_model
 from django.utils import timezone
+from medications.models import Medication
 
 User = get_user_model()
+
+
+class MedicationIntakeLog(models.Model):
+    user = models.ForeignKey(User, on_delete=models.CASCADE)
+    medication_ref_id = models.IntegerField(db_index=True)
+    date = models.DateField()
+    time_taken = models.TimeField(null=True, blank=True)
+    dose_index = models.IntegerField()
+
+    class Meta:
+        constraints = [
+            models.UniqueConstraint(
+                fields=["user", "medication_ref_id", "date", "dose_index"],
+                name="uniq_med_intake_per_dose_per_day",
+            )
+        ]
+
+    def __str__(self):
+        return f"{self.user_id} {self.medication_ref_id} {self.date} #{self.dose_index}"
+
+
+    
+    
 class FoodLog(models.Model):
     MEAL_CHOICES = [
         ("breakfast", "Breakfast"),

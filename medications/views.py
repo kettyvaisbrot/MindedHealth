@@ -1,13 +1,9 @@
-from rest_framework import viewsets, permissions, status
-from rest_framework.decorators import action
-from rest_framework.response import Response
-from .serializers import MedicationSerializer,MedicationLogSerializer
+from rest_framework import viewsets, permissions
+from .serializers import MedicationSerializer
 from .models import Medication
-from .services import log_medication_service, delete_medication
+from .services import delete_medication
 from django.contrib.auth.decorators import login_required
 from django.shortcuts import render
-from drf_yasg.utils import swagger_auto_schema
-from drf_yasg import openapi
 
 
 
@@ -19,9 +15,7 @@ def medications_page(request):
 class MedicationViewSet(viewsets.ModelViewSet):
     """
     API endpoint for managing medications.
-
     - List, retrieve, create, update, and delete medications for the authenticated user.
-    - Log medication intake with the custom 'log' action.
     """
     serializer_class = MedicationSerializer
     permission_classes = [permissions.IsAuthenticated]
@@ -37,39 +31,4 @@ class MedicationViewSet(viewsets.ModelViewSet):
 
     def perform_destroy(self, instance):
         delete_medication(instance)
-
-    @swagger_auto_schema(
-        method='post',
-        request_body=MedicationLogSerializer,
-        responses={
-            201: openapi.Response(
-                description="Medication logged successfully",
-                schema=openapi.Schema(
-                    type=openapi.TYPE_OBJECT,
-                    properties={
-                        'detail': openapi.Schema(type=openapi.TYPE_STRING)
-                    }
-                )
-            ),
-            400: 'Bad Request'
-        },
-        operation_description="Log a medication intake event for the authenticated user."
-    )
-
-
-
-    @action(detail=False, methods=['post'], url_path='log')
-    def log_medication(self, request):
-        serializer = MedicationLogSerializer(data=request.data, context={"request": request})
-        serializer.is_valid(raise_exception=True)
-
-        log_medication_service(
-            user=request.user,
-            medication_id=serializer.validated_data["medication_id"],
-            date=serializer.validated_data["date"],
-            time_taken=serializer.validated_data["time_taken"],
-            dose_index=serializer.validated_data["dose_index"],
-        )
-
-        return Response({"detail": "Medication logged successfully"}, status=status.HTTP_201_CREATED)
 

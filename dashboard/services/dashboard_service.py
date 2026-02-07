@@ -2,7 +2,7 @@ from dashboard.models import (
     FoodLog, SportLog, SleepingLog, Meetings,
     SeizureLog
 )
-from medications.models import MedicationLog
+from dashboard.models import MedicationIntakeLog
 from django.utils import timezone
 
 def fetch_dashboard_logs(user, date):
@@ -12,5 +12,5 @@ def fetch_dashboard_logs(user, date):
         "sleeping_logs": SleepingLog.objects.filter(user=user, date=date),
         "meetings_logs": Meetings.objects.filter(user=user, date=date),
         "seizure_logs": SeizureLog.objects.filter(user=user, date=date),
-        "medication_logs": MedicationLog.objects.filter(user=user, date=date).select_related("medication"),
+        "medication_logs": MedicationIntakeLog.objects.filter(user=user, date=date).select_related("medication"),
     }
