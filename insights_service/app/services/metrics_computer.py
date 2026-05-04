@@ -29,6 +29,24 @@ def compute_metrics(logs: dict) -> dict:
         if felt_off else 0
     )
 
+    # Medication adherence percent (derived from already-computed dose counts)
+    total_doses = metrics["taken_doses"] + metrics["missed_doses"]
+    metrics["medication_adherence_percent"] = (
+        round(metrics["taken_doses"] / total_doses * 100, 1) if total_doses else 0
+    )
+
+    # Meetings
+    meeting_logs = logs.get("meetings", [])
+    positivity_scores = [
+        l.get("positivity_rating")
+        for l in meeting_logs
+        if l.get("positivity_rating") is not None
+    ]
+    metrics["avg_meeting_positivity"] = (
+        round(sum(positivity_scores) / len(positivity_scores), 1) if positivity_scores else 0
+    )
+    metrics["positive_meetings"] = sum(1 for s in positivity_scores if s >= 3)
+
     return metrics
 
 

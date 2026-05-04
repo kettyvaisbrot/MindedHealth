@@ -13,7 +13,7 @@ def fetch_user_logs(user):
         "sleep": SleepingLog.objects.filter(user=user, date__range=(week_ago, today)),
         "meetings": Meetings.objects.filter(user=user, date__range=(week_ago, today)),
         "felt_off": FeltOffLog.objects.filter(user=user, date__range=(week_ago, today)),
-        "medications": MedicationIntakeLog.objects.filter(user=user, date__range=(week_ago, today)).select_related("medication"),
+        "medications": MedicationIntakeLog.objects.filter(user=user, date__range=(week_ago, today)),
     }
 
     return logs

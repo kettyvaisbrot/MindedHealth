@@ -19,14 +19,78 @@ import requests
 INSIGHTS_SERVICE_URL = os.getenv("INSIGHTS_SERVICE_URL", "http://localhost:8002")
 
 
+def _time_str(t):
+    return t.strftime("%H:%M:%S") if t else None
+
+
+def _compute_sleep_hours(obj):
+    from datetime import datetime, timedelta
+    if obj.went_to_sleep_yesterday and obj.wake_up_time:
+        sleep_dt = datetime.combine(datetime.today(), obj.went_to_sleep_yesterday)
+        wake_dt = datetime.combine(datetime.today(), obj.wake_up_time)
+        if wake_dt <= sleep_dt:
+            wake_dt += timedelta(days=1)
+        return round((wake_dt - sleep_dt).total_seconds() / 3600, 2)
+    return None
+
+
 def serialize_logs(logs):
-    serialized = {}
-    for key, queryset in logs.items():
-        serialized[key] = [
-            {field.name: getattr(obj, field.name) for field in obj._meta.fields}
-            for obj in queryset
-        ]
-    return serialized
+    return {
+        "food": [
+            {
+                "date": str(obj.date),
+                "breakfast_ate": obj.breakfast_ate,
+                "lunch_ate": obj.lunch_ate,
+                "dinner_ate": obj.dinner_ate,
+            }
+            for obj in logs.get("food", [])
+        ],
+        "sport": [
+            {
+                "date": str(obj.date),
+                "did_sport": obj.did_sport,
+                "sport_type": obj.sport_type,
+                "other_sport": obj.other_sport,
+            }
+            for obj in logs.get("sport", [])
+        ],
+        "sleep": [
+            {
+                "date": str(obj.date),
+                "went_to_sleep_yesterday": _time_str(obj.went_to_sleep_yesterday),
+                "wake_up_time": _time_str(obj.wake_up_time),
+                "woke_up_during_night": obj.woke_up_during_night,
+                "hours": _compute_sleep_hours(obj),
+            }
+            for obj in logs.get("sleep", [])
+        ],
+        "meetings": [
+            {
+                "date": str(obj.date),
+                "time": _time_str(obj.time),
+                "meeting_type": obj.meeting_type,
+                "positivity_rating": obj.positivity_rating,
+            }
+            for obj in logs.get("meetings", [])
+        ],
+        "medications": [
+            {
+                "date": str(obj.date),
+                "taken": obj.time_taken is not None,
+            }
+            for obj in logs.get("medications", [])
+        ],
+        "felt_off": [
+            {
+                "date": str(obj.date),
+                "had_moment": obj.had_moment,
+                "duration": obj.duration,
+                "intensity": obj.intensity,
+                "description": obj.description,
+            }
+            for obj in logs.get("felt_off", [])
+        ],
+    }
 
 
 class AIInsightsAPIView(APIView):
