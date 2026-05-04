@@ -1,5 +1,6 @@
 from django.shortcuts import render
 from django.contrib.auth.decorators import login_required
+from users.decorators import therapist_required
 from django.db.models import Avg, F, ExpressionWrapper, IntegerField, Count
 from datetime import datetime, timedelta
 from calendar import month_name
@@ -82,6 +83,7 @@ def keep_alive(request):
 
 
 @login_required
+@therapist_required
 def statistics_view(request):
     selected_month = request.GET.get("month")
     selected_year = request.GET.get("year")
