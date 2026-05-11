@@ -2,23 +2,27 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>{{ patient_profile.user.username }} - Detail</title>
+    <title>{{ patient.user.username }} - Detail</title>
 </head>
 <body>
-    <h1>{{ patient_profile.user.username }}</h1>
+    <h1>{{ patient.user.username }}</h1>
 
-    <p>Choose whose view you want:</p>
-    
-    <a href="{% url 'patient_detail' patient_profile.user.id %}">
-        <button>Patient</button>
-    </a>
-
-    {% if patient_profile.family_member %}
-        <a href="{% url 'family_dashboard' patient_profile.family_member.user.id %}">
-            <button>Family Member</button>
+    <p>
+        <a href="{% url 'my_statistics:statistics_view' %}?patient_id={{ patient.id }}">
+            <button>View Statistics</button>
         </a>
+    </p>
+
+    {% if patient.family_member %}
+        <p>
+            <a href="{% url 'family_dashboard' patient.family_member.id %}">
+                <button>Family Member</button>
+            </a>
+        </p>
     {% else %}
         <p>No family member assigned yet.</p>
     {% endif %}
+
+    <p><a href="{% url 'therapist_dashboard' %}">← Back to Dashboard</a></p>
 </body>
 </html>

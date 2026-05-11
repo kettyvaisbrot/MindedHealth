@@ -88,7 +88,7 @@ def family_member_page(request):
 def home(request):
     if request.user.is_authenticated:
         if request.user.role == 'therapist':
-            return render(request, "users/therapist_dashboard.html", {"is_authenticated": True})
+            return redirect("therapist_dashboard")
         elif request.user.role == 'family':
             return render(request, "family_member_page.html", {"is_authenticated": True})
         else:

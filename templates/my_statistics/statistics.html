@@ -58,7 +58,7 @@
 </head>
 <body>
     <div class="container">
-        <h1>Statistics for {{ current_year }}/{{ current_month }}</h1>
+        <h1>Statistics for {{ patient_username }} — {{ current_year }}/{{ current_month }}</h1>
 
         <h2>Food Statistics</h2>
         <p>Average Breakfast Time: {% if breakfast_stats %}{{ breakfast_stats }}{% else %}No data{% endif %}</p>
@@ -154,8 +154,11 @@
 
 
 
+        <p><a href="{% url 'patient_detail' patient_id %}">← Back to Patient</a></p>
+
         <h2>Select Month and Year</h2>
         <form method="GET" action="{% url 'my_statistics:statistics_view' %}">
+            <input type="hidden" name="patient_id" value="{{ patient_id }}">
             <label for="month">Month:</label>
             <select id="month" name="month">
                 {% for month_num, month_name in month_choices %}

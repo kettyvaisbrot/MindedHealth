@@ -1,5 +1,7 @@
 from django.shortcuts import render
 from django.contrib.auth.decorators import login_required
+from django.http import HttpResponseForbidden
+from users.models import PatientProfile
 from django.db.models import Avg, F, ExpressionWrapper, IntegerField, Count
 from datetime import datetime, timedelta
 from calendar import month_name
@@ -83,6 +85,31 @@ def keep_alive(request):
 
 @login_required
 def statistics_view(request):
+    if request.user.role == 'patient':
+        return HttpResponseForbidden("Statistics are available through your therapist only.")
+
+    if request.user.role != 'therapist':
+        return HttpResponseForbidden("Access denied.")
+
+    patient_id = request.GET.get("patient_id")
+    if not patient_id:
+        return HttpResponseForbidden("No patient selected. Access statistics via the patient detail page.")
+
+    try:
+        patient_profile = PatientProfile.objects.get(id=patient_id)
+    except PatientProfile.DoesNotExist:
+        return HttpResponseForbidden("Patient not found.")
+
+    try:
+        therapist_profile = request.user.therapistprofile
+    except Exception:
+        return HttpResponseForbidden("Therapist profile not found.")
+
+    if patient_profile.therapist != therapist_profile:
+        return HttpResponseForbidden("Access denied. This patient is not assigned to you.")
+
+    target_user = patient_profile.user
+
     selected_month = request.GET.get("month")
     selected_year = request.GET.get("year")
 
@@ -98,7 +125,9 @@ def statistics_view(request):
         if not (1 <= selected_month <= 12):
             raise ValueError(f"Invalid month: {selected_month}")
 
-        context = gather_statistics_for_user(request.user, selected_year, selected_month)
+        context = gather_statistics_for_user(target_user, selected_year, selected_month)
+        context['patient_id'] = patient_id
+        context['patient_username'] = target_user.username
         return render(request, "my_statistics/statistics.html", context)
     except Exception:
         return HttpResponse(

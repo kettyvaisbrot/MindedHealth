@@ -17,6 +17,7 @@ import requests
 # Use localhost when running both services locally.
 # In Docker/K8s you’ll set INSIGHTS_SERVICE_URL to the service DNS (e.g. http://insights-service:8002)
 INSIGHTS_SERVICE_URL = os.getenv("INSIGHTS_SERVICE_URL", "http://localhost:8002")
+INTERNAL_API_KEY = os.getenv("INTERNAL_API_KEY", "")
 
 
 def _time_str(t):
@@ -127,6 +128,7 @@ class AIInsightsAPIView(APIView):
             resp = requests.post(
                 f"{INSIGHTS_SERVICE_URL}/api/v1/insights",
                 json={"user_id": user.id, "logs": serialized_logs},
+                headers={"X-Internal-Key": INTERNAL_API_KEY},
                 timeout=30,
             )
             resp.raise_for_status()
