@@ -1,0 +1,11 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(xargs ls -la)",
+      "Bash(git -C c:/Users/ketty/Desktop/MindedHealth log --oneline --all)",
+      "Bash(git -C c:/Users/ketty/Desktop/MindedHealth show --stat HEAD)",
+      "Bash(git -C c:/Users/ketty/Desktop/MindedHealth log --all --oneline --diff-filter=M -- k8s/django-deployment.yaml)",
+      "Bash(git -C c:/Users/ketty/Desktop/MindedHealth show HEAD:k8s/django-deployment.yaml)"
+    ]
+  }
+}

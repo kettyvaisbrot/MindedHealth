@@ -9,6 +9,7 @@ https://docs.djangoproject.com/en/5.0/topics/settings/
 
 from pathlib import Path
 from dotenv import load_dotenv
+from datetime import timedelta
 import os
 
 load_dotenv()
@@ -90,6 +91,7 @@ REST_FRAMEWORK = {
     'DEFAULT_AUTHENTICATION_CLASSES': [
         'rest_framework.authentication.TokenAuthentication',
         'rest_framework.authentication.SessionAuthentication',
+        'rest_framework_simplejwt.authentication.JWTAuthentication',
     ],
     
     # Permissions
@@ -122,6 +124,60 @@ REST_FRAMEWORK = {
     ),
 }
 
+
+# =======================
+# JWT AUTHENTICATION
+# =======================
+#
+# KEY MANAGEMENT STRATEGY
+# -----------------------
+# This project uses RS256 (asymmetric RSA signing).
+# Django holds the private key and is the only service that can issue tokens.
+# FastAPI services (insights_service, ai_microservice) and future workers
+# hold only the public key and can verify tokens but never issue them.
+#
+# GENERATING KEYS (one-time per environment)
+#   openssl genrsa -out private.pem 2048
+#   openssl rsa -in private.pem -pubout -out public.pem
+#
+# Never commit either key file. Add *.pem to .gitignore.
+#
+# LOCAL DEVELOPMENT (.env)
+#   Flatten the PEM to a single line by replacing real newlines with \n:
+#   JWT_PRIVATE_KEY="-----BEGIN RSA PRIVATE KEY-----\nMIIE...\n-----END RSA PRIVATE KEY-----"
+#   JWT_PUBLIC_KEY="-----BEGIN PUBLIC KEY-----\nMIIB...\n-----END PUBLIC KEY-----"
+#   settings.py converts \n back to real newlines via .replace('\\n', '\n').
+#
+# KUBERNETES (production)
+#   Store as a Kubernetes Secret, never as a plain env var in the Deployment manifest:
+#     kubectl create secret generic jwt-keys \
+#       --from-literal=JWT_PRIVATE_KEY="$(cat private.pem)" \
+#       --from-literal=JWT_PUBLIC_KEY="$(cat public.pem)"
+#   Inject into pods via envFrom referencing the secret.
+#   The private key secret must be scoped to the Django Deployment only.
+#   The public key secret is shared with insights_service and ai_microservice Deployments.
+#
+# KEY ROTATION
+#   1. Generate a new key pair.
+#   2. Add the new public key to all verifying services alongside the old one
+#      (both keys trusted simultaneously during the transition window).
+#   3. Update Django to sign with the new private key.
+#   4. Wait for all access tokens signed with the old key to expire (15 minutes).
+#   5. Remove the old public key from verifying services.
+SIMPLE_JWT = {
+    'ACCESS_TOKEN_LIFETIME': timedelta(minutes=15),
+    'REFRESH_TOKEN_LIFETIME': timedelta(days=7),
+    'ROTATE_REFRESH_TOKENS': False,
+    'ALGORITHM': 'RS256',
+    'SIGNING_KEY': os.getenv('JWT_PRIVATE_KEY', '').replace('\\n', '\n'),
+    'VERIFYING_KEY': os.getenv('JWT_PUBLIC_KEY', '').replace('\\n', '\n'),
+    'ISSUER': 'mindedhealth-auth',
+    'AUTH_HEADER_TYPES': ('Bearer',),
+    'USER_ID_FIELD': 'id',
+    'USER_ID_CLAIM': 'sub',
+    'JTI_CLAIM': 'jti',
+    'TOKEN_OBTAIN_SERIALIZER': 'users.tokens.CustomTokenObtainPairSerializer',
+}
 
 MIDDLEWARE = [
     "silk.middleware.SilkyMiddleware",

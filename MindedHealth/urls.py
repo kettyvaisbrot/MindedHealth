@@ -34,6 +34,7 @@ from drf_yasg.views import get_schema_view
 from drf_yasg import openapi
 from rest_framework.permissions import IsAdminUser
 from rest_framework.authtoken.views import obtain_auth_token
+from rest_framework_simplejwt.views import TokenObtainPairView, TokenRefreshView
 from django.contrib.auth.decorators import login_required
 from django.contrib.auth import views as auth_views
 
@@ -73,6 +74,8 @@ urlpatterns = [
     path("insights/", include("insights.urls")),
     path('users/', include('users.urls')), 
     path("api-token-auth/", obtain_auth_token, name="api_token_auth"),
+    path("api/token/", TokenObtainPairView.as_view(), name="token_obtain_pair"),
+    path("api/token/refresh/", TokenRefreshView.as_view(), name="token_refresh"),
         path('password_reset/', auth_views.PasswordResetView.as_view(
         template_name='password_reset.html',
         email_template_name='password_reset_email.html',  # email content
