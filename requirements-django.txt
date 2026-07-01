@@ -81,3 +81,4 @@ yarl==1.18.3
 django-silk
 djangorestframework-simplejwt
 cryptography
+PyJWT

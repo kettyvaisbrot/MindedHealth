@@ -89,7 +89,7 @@ class UsersViewsTest(TestCase):
         self.assertContains(response, 'patient1')
 
     def test_patient_detail_view(self):
-        self.client.force_login(self.therapist_user) 
+        self.client.force_login(self.therapist_user)
         patient_id = self.patient_profile.id
         self.assertIsNotNone(patient_id)
 

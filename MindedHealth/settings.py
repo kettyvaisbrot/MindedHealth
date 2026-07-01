@@ -179,6 +179,45 @@ SIMPLE_JWT = {
     'TOKEN_OBTAIN_SERIALIZER': 'users.tokens.CustomTokenObtainPairSerializer',
 }
 
+
+# =======================
+# INTERNAL SERVICE JWT
+# =======================
+# This key pair is SEPARATE from the user-facing JWT key pair above
+# (SIMPLE_JWT / JWT_PRIVATE_KEY / JWT_PUBLIC_KEY).
+#
+# Django signs internal service tokens with INTERNAL_JWT_PRIVATE_KEY.
+# Downstream FastAPI services (insights_service, ai_microservice) hold only
+# INTERNAL_JWT_PUBLIC_KEY — never the private key and never the user JWT keys.
+# User JWTs are validated once at the Django boundary and never forwarded.
+#
+# GENERATING KEYS (one-time per environment, separate from user JWT keys):
+#   openssl genrsa -out internal_private.pem 2048
+#   openssl rsa -in internal_private.pem -pubout -out internal_public.pem
+#
+# LOCAL DEVELOPMENT (.env) — same \n-escaping convention as JWT_PRIVATE_KEY:
+#   INTERNAL_JWT_PRIVATE_KEY="-----BEGIN RSA PRIVATE KEY-----\nMIIE...\n-----END RSA PRIVATE KEY-----"
+#   INTERNAL_JWT_PUBLIC_KEY="-----BEGIN PUBLIC KEY-----\nMIIB...\n-----END PUBLIC KEY-----"
+#
+# KUBERNETES — store in a Secret named internal-jwt-keys, separate from jwt-keys:
+#   kubectl create secret generic internal-jwt-keys \
+#     --from-literal=INTERNAL_JWT_PRIVATE_KEY="$(cat internal_private.pem)" \
+#     --from-literal=INTERNAL_JWT_PUBLIC_KEY="$(cat internal_public.pem)"
+#   Mount INTERNAL_JWT_PRIVATE_KEY only into the Django Deployment.
+#   Mount INTERNAL_JWT_PUBLIC_KEY into insights_service and ai_microservice Deployments.
+#   The Django Deployment must never receive INTERNAL_JWT_PUBLIC_KEY of other services.
+#
+# KEY ROTATION — no coordination with the user JWT key pair required:
+#   1. Generate a new internal key pair.
+#   2. Deploy new INTERNAL_JWT_PUBLIC_KEY to all verifying services (both old and new trusted).
+#   3. Update Django to sign with the new INTERNAL_JWT_PRIVATE_KEY.
+#   4. Wait for all in-flight internal tokens to expire (INTERNAL_JWT_LIFETIME_SECONDS = 60s).
+#   5. Remove the old public key from verifying services.
+INTERNAL_JWT_PRIVATE_KEY = os.getenv('INTERNAL_JWT_PRIVATE_KEY', '').replace('\\n', '\n')
+INTERNAL_JWT_PUBLIC_KEY = os.getenv('INTERNAL_JWT_PUBLIC_KEY', '').replace('\\n', '\n')
+INTERNAL_JWT_ISSUER = os.getenv('INTERNAL_JWT_ISSUER', 'django-api')
+INTERNAL_JWT_LIFETIME_SECONDS = 60  # seconds; intentionally short — internal hop only
+
 MIDDLEWARE = [
     "silk.middleware.SilkyMiddleware",
     "django.middleware.security.SecurityMiddleware",

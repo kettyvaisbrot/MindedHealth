@@ -19,7 +19,7 @@ from drf_yasg import openapi
 from django.shortcuts import render, redirect, get_object_or_404
 from django.utils.timezone import localtime, now
 from django.http import HttpResponseNotFound, JsonResponse
-from django.utils.decorators import method_decorator
+
 from datetime import datetime
 from rest_framework.permissions import IsAuthenticated
 
@@ -105,7 +105,6 @@ def category_summary_page(request, category):
     return render(request, template_name, {'category': category})
 
 
-@method_decorator(login_required, name='dispatch')
 class CategoryEditView(APIView):
     permission_classes = [IsAuthenticated]
 
