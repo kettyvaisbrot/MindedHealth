@@ -1,14 +1,6 @@
 """
 Internal service JWT validator for insights_service.
 
-CURRENT STATUS: infrastructure only — not yet wired into any request handler.
-The endpoint in app/api/insights.py still authenticates via INTERNAL_API_KEY
-(the X-Internal-Key header). That mechanism is untouched.
-
-NEXT PR: app/api/insights.py will be updated to call validate_internal_jwt()
-instead of verify_internal_key(). Once that change is deployed and confirmed
-in production, X-Internal-Key / INTERNAL_API_KEY will be removed.
-
 Architecture context:
   Django is the external trust boundary. User JWTs are validated at Django and
   never forwarded here. Django issues a short-lived internal service JWT

@@ -1,18 +1,16 @@
 """
-Tests for the dual-mode authentication introduced in PR #7.
+Tests for Internal Service JWT authentication (PR #9).
 
-The endpoint now tries JWT first, then falls back to X-Internal-Key.
-Both paths must accept valid credentials and reject invalid ones.
+The endpoint requires Authorization: Bearer <internal-service-JWT>.
+No other authentication mechanism is accepted.
 
 Matrix:
   ✓ Valid Internal JWT             → 200
-  ✓ Valid INTERNAL_API_KEY         → 200
   ✓ Invalid JWT (wrong key)        → 401
   ✓ Expired JWT                    → 401
   ✓ Wrong audience                 → 401
   ✓ Wrong issuer                   → 401
-  ✓ Invalid X-Internal-Key         → 401
-  ✓ Missing authentication         → 401
+  ✓ Missing Authorization header   → 401
 """
 import uuid
 import pytest
@@ -29,7 +27,6 @@ from app.main import app
 
 client = TestClient(app)
 
-_TEST_API_KEY = "test-internal-api-key-pr7"
 # Minimal valid log payload — content does not matter for auth tests.
 _PAYLOAD = {"user_id": 1, "logs": {k: [] for k in ["food", "sport", "sleep", "meetings", "medications", "felt_off"]}}
 
@@ -112,21 +109,11 @@ def _mock_business_logic():
 def test_valid_internal_jwt_returns_200(key_pair):
     private_pem, public_pem = key_pair
     token = _make_token(private_pem)
-    with _jwt_patches(public_pem), patch("app.api.insights.INTERNAL_API_KEY", _TEST_API_KEY):
+    with _jwt_patches(public_pem):
         resp = client.post(
             "/api/v1/insights",
             json=_PAYLOAD,
             headers={"Authorization": f"Bearer {token}"},
-        )
-    assert resp.status_code == 200
-
-
-def test_valid_internal_api_key_returns_200():
-    with patch("app.api.insights.INTERNAL_API_KEY", _TEST_API_KEY):
-        resp = client.post(
-            "/api/v1/insights",
-            json=_PAYLOAD,
-            headers={"X-Internal-Key": _TEST_API_KEY},
         )
     assert resp.status_code == 200
 
@@ -180,17 +167,6 @@ def test_wrong_issuer_returns_401(key_pair):
     assert resp.status_code == 401
 
 
-def test_invalid_api_key_returns_401():
-    with patch("app.api.insights.INTERNAL_API_KEY", _TEST_API_KEY):
-        resp = client.post(
-            "/api/v1/insights",
-            json=_PAYLOAD,
-            headers={"X-Internal-Key": "wrong-key"},
-        )
-    assert resp.status_code == 401
-
-
 def test_missing_authentication_returns_401():
-    with patch("app.api.insights.INTERNAL_API_KEY", _TEST_API_KEY):
-        resp = client.post("/api/v1/insights", json=_PAYLOAD)
+    resp = client.post("/api/v1/insights", json=_PAYLOAD)
     assert resp.status_code == 401
