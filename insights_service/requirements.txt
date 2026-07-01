@@ -4,3 +4,5 @@ requests
 python-dotenv
 redis
 pydantic
+PyJWT
+cryptography
