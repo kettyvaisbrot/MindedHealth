@@ -11,7 +11,7 @@ client = TestClient(app)
 # _authenticate is bypassed so each test exercises only what it intends to test.
 @pytest.fixture(autouse=True)
 def _bypass_auth(monkeypatch):
-    monkeypatch.setattr("app.api.insights._authenticate", lambda auth, key: None)
+    monkeypatch.setattr("app.api.insights._authenticate", lambda auth: None)
 
 
 SAMPLE_LOGS = {
