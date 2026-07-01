@@ -6,6 +6,7 @@ from django.contrib.auth import get_user_model
 User = get_user_model()
 
 INSIGHTS_URL = "/insights/api/insights/"
+_FAKE_TOKEN = "test.internal.jwt"
 
 
 @pytest.fixture
@@ -22,6 +23,29 @@ def auth_client(user):
 
 def _empty_logs():
     return {k: [] for k in ["food", "sport", "sleep", "meetings", "medications", "felt_off"]}
+
+
+# Patch generate_internal_service_token for every test in this file.
+# Tests here cover payload shape and failure handling, not token issuance.
+# Without this patch the real function would fail — no RSA key is configured
+# in the test environment.
+@pytest.fixture(autouse=True)
+def mock_token_issuer():
+    with patch(
+        "insights.views.generate_internal_service_token",
+        return_value=_FAKE_TOKEN,
+    ) as mock:
+        yield mock
+
+
+# DRF stores throttle_classes as a class attribute on APIView at import time,
+# so overriding Django settings alone is not enough. Patching the class
+# attribute directly is the only reliable way to disable throttling in tests
+# when Redis is not running locally.
+@pytest.fixture(autouse=True)
+def disable_throttle(monkeypatch):
+    from rest_framework.views import APIView
+    monkeypatch.setattr(APIView, "throttle_classes", [])
 
 
 # ── authentication ────────────────────────────────────────────────────────────
@@ -166,3 +190,47 @@ def test_503_response_includes_insights_key(mock_fetch, mock_post, auth_client):
     response = auth_client.get(INSIGHTS_URL)
 
     assert "insights" in response.data
+
+
+# ── PR #8: internal JWT header verification ───────────────────────────────────
+
+@patch("insights.views.requests.post")
+@patch("insights.views.fetch_user_logs")
+@pytest.mark.django_db
+def test_authorization_bearer_header_is_sent(mock_fetch, mock_post, auth_client):
+    mock_fetch.return_value = _empty_logs()
+    mock_post.return_value = MagicMock(json=lambda: {"insights": "ok"})
+
+    auth_client.get(INSIGHTS_URL)
+
+    headers = mock_post.call_args.kwargs["headers"]
+    assert headers.get("Authorization") == f"Bearer {_FAKE_TOKEN}"
+
+
+@patch("insights.views.requests.post")
+@patch("insights.views.fetch_user_logs")
+@pytest.mark.django_db
+def test_x_internal_key_not_sent(mock_fetch, mock_post, auth_client):
+    mock_fetch.return_value = _empty_logs()
+    mock_post.return_value = MagicMock(json=lambda: {"insights": "ok"})
+
+    auth_client.get(INSIGHTS_URL)
+
+    headers = mock_post.call_args.kwargs["headers"]
+    assert "X-Internal-Key" not in headers
+
+
+@patch("insights.views.requests.post")
+@patch("insights.views.fetch_user_logs")
+@pytest.mark.django_db
+def test_token_issued_with_correct_arguments(mock_fetch, mock_post, auth_client, user, mock_token_issuer):
+    mock_fetch.return_value = _empty_logs()
+    mock_post.return_value = MagicMock(json=lambda: {"insights": "ok"})
+
+    auth_client.get(INSIGHTS_URL)
+
+    mock_token_issuer.assert_called_once_with(
+        user_id=user.id,
+        user_role=user.role,
+        audience="insights-service",
+    )

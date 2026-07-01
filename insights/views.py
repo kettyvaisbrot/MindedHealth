@@ -3,6 +3,7 @@ from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticated
 
 from insights.services.log_fetcher import fetch_user_logs
+from users.internal_tokens import generate_internal_service_token
 
 from django.contrib.auth.decorators import login_required
 from django.shortcuts import render
@@ -17,7 +18,6 @@ import requests
 # Use localhost when running both services locally.
 # In Docker/K8s you’ll set INSIGHTS_SERVICE_URL to the service DNS (e.g. http://insights-service:8002)
 INSIGHTS_SERVICE_URL = os.getenv("INSIGHTS_SERVICE_URL", "http://localhost:8002")
-INTERNAL_API_KEY = os.getenv("INTERNAL_API_KEY", "")
 
 
 def _time_str(t):
@@ -124,11 +124,19 @@ class AIInsightsAPIView(APIView):
         serialized_logs = serialize_logs(logs)
 
         # 3) Call insights_service (it handles Redis caching + metrics + prompt + AI)
+        # Issue a short-lived internal service JWT scoped to insights-service.
+        # This replaces the former X-Internal-Key shared secret.
+        internal_token = generate_internal_service_token(
+            user_id=user.id,
+            user_role=user.role,
+            audience="insights-service",
+        )
+
         try:
             resp = requests.post(
                 f"{INSIGHTS_SERVICE_URL}/api/v1/insights",
                 json={"user_id": user.id, "logs": serialized_logs},
-                headers={"X-Internal-Key": INTERNAL_API_KEY},
+                headers={"Authorization": f"Bearer {internal_token}"},
                 timeout=30,
             )
             resp.raise_for_status()
