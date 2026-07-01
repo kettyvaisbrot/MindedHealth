@@ -7,6 +7,13 @@ from app.main import app
 client = TestClient(app)
 
 
+# These tests cover business logic (caching, prompt quality, etc.), not auth.
+# _authenticate is bypassed so each test exercises only what it intends to test.
+@pytest.fixture(autouse=True)
+def _bypass_auth(monkeypatch):
+    monkeypatch.setattr("app.api.insights._authenticate", lambda auth, key: None)
+
+
 SAMPLE_LOGS = {
     "food": [
         {"date": "2026-04-28", "breakfast_ate": True, "lunch_ate": True, "dinner_ate": True}
