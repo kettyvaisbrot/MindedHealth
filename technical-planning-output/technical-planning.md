@@ -5,7 +5,24 @@
 **פיצ'ר:** Chat Message Persistence with Day-Boundary Retention
 **מערכת:** MindedHealth — Django 5.1 + Channels 4.2 + Redis + PostgreSQL/SQLite
 **מסמך מקור:** תהליך Feature Discovery + Technical Planning אינטראקטיבי, המשך ל-`docs/features/feature_family_user_chat.md`
-**סטטוס:** מוכן לסקירה — טרם יושם
+**סטטוס:** PR 1-3 מומשו ומוזגו ל-`feat/chat-message-persistence`. PR 4 (manifests) כתוב, ממתין להרצה. מיזוג סופי ל-`main` טרם בוצע.
+
+---
+
+## 0. סטטוס ביצוע (Implementation Status)
+
+| PR | תוכן | סטטוס |
+|---|---|---|
+| **PR 1 — Message Storage** | מודל `ChatMessage`, הצפנת שדה (`chat/encryption.py`, `chat/fields.py`), migration | ✅ **הושלם ומוזג** |
+| **PR 2 — Scheduled Retention** | `MindedHealth/celery.py`, `CELERY_BEAT_SCHEDULE`, `chat/tasks.py::end_chat_day`, `ChatConsumer.day_ended` | ✅ **הושלם ומוזג** |
+| **PR 3 — History Delivery** | שמירת הודעות ב-`receive()`, `get_history_page` (`chat/services.py`), `load_history` action, `room.html` (גלילה אוטומטית + redirect על קוד 4000) | ✅ **הושלם ומוזג** |
+| **PR 4 — Deployment Readiness** | `k8s/celery-worker-deployment.yaml`, `k8s/celery-beat-deployment.yaml` (חדשים), `k8s/django-deployment.yaml` מעודכן עם `CHAT_MESSAGE_ENCRYPTION_KEY` | ⚠️ **קוד כתוב, לא הורץ** — ממתין לגישת AWS |
+
+**מה נשאר בפועל ב-PR 4, כשתהיה גישה:**
+1. `kubectl create secret generic django-secrets --from-literal=CHAT_MESSAGE_ENCRYPTION_KEY=...` (מפתח **חדש** לפרודקשן — לא זהה למפתח המקומי ב-`.env`), בנוסף לערכים הקיימים שכבר תוכננו שם (`DB_PASSWORD`, `EMAIL_HOST_PASSWORD`).
+2. `kubectl apply -f k8s/celery-worker-deployment.yaml -f k8s/celery-beat-deployment.yaml -f k8s/django-deployment.yaml`.
+3. `kubectl rollout restart deployment/django-app`.
+4. וידוא בלוגים ש-`celery-beat` אכן קלט את `end-chat-day` ל-schedule, ושה-`celery-worker` עלה בלי שגיאות חיבור.
 
 ---
 

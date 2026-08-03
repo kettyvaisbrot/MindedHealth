@@ -1,26 +1,25 @@
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: django-app
+  name: celery-worker
   labels:
-    app: django
+    app: celery-worker
 spec:
-  replicas: 2
+  replicas: 1
   selector:
     matchLabels:
-      app: django
+      app: celery-worker
   template:
     metadata:
       labels:
-        app: django
+        app: celery-worker
     spec:
       containers:
-        - name: django-app
+        - name: celery-worker
           image: kettyvaisbrot/mindedhealth-django:v5
           imagePullPolicy: Always
+          command: ["celery", "-A", "MindedHealth", "worker", "--loglevel=info"]
 
-          ports:
-            - containerPort: 8000
           resources:
             requests:
               cpu: "100m"
@@ -29,6 +28,9 @@ spec:
               cpu: "500m"
               memory: "512Mi"
 
+          # Same Django boot requirements as django-app, minus what this
+          # process doesn't need: CHAT_MESSAGE_ENCRYPTION_KEY (end_chat_day
+          # only deletes rows, never reads/decrypts content) and AI_SERVICE_URL.
           env:
             - name: DJANGO_ENV
               value: "production"
@@ -52,20 +54,3 @@ spec:
                   key: DB_PASSWORD
             - name: DB_PORT
               value: "5432"
-
-            - name: EMAIL_HOST_USER
-              value: "kettyvaisbrot@gmail.com"
-            - name: EMAIL_HOST_PASSWORD
-              valueFrom:
-                secretKeyRef:
-                  name: django-secrets
-                  key: EMAIL_HOST_PASSWORD
-
-            - name: CHAT_MESSAGE_ENCRYPTION_KEY
-              valueFrom:
-                secretKeyRef:
-                  name: django-secrets
-                  key: CHAT_MESSAGE_ENCRYPTION_KEY
-
-            - name: AI_SERVICE_URL
-              value: "http://ai-microservice:8001"
