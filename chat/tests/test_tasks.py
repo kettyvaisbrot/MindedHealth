@@ -86,6 +86,7 @@ def test_end_chat_day_disconnects_connected_clients_with_code_4000(user):
         assert connected
 
         await communicator.receive_json_from()  # your_pseudonym
+        await communicator.receive_json_from()  # initial history page
         await communicator.receive_json_from()  # initial user_list_update
 
         await sync_to_async(end_chat_day, thread_sensitive=False)()
