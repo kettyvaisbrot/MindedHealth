@@ -10,6 +10,7 @@ https://docs.djangoproject.com/en/5.0/topics/settings/
 from pathlib import Path
 from dotenv import load_dotenv
 from datetime import timedelta
+from celery.schedules import crontab
 from django.core.exceptions import ImproperlyConfigured
 import os
 
@@ -367,6 +368,16 @@ CHANNEL_LAYERS = {
 }
 
 CELERY_BROKER_URL = REDIS_URL
+
+# The schedule time (23:59) is meaningless unless interpreted in the same
+# timezone the chat day boundary itself uses -- see chat/services.py get_chat_day().
+CELERY_TIMEZONE = "Asia/Jerusalem"
+CELERY_BEAT_SCHEDULE = {
+    "end-chat-day": {
+        "task": "chat.tasks.end_chat_day",
+        "schedule": crontab(hour=23, minute=59),
+    },
+}
 CACHES = {
     "default": {
         "BACKEND": "django_redis.cache.RedisCache",
