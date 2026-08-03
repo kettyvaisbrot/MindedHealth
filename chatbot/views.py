@@ -1,6 +1,5 @@
 # chatbot/views.py
 from django.http import JsonResponse
-from django.views.decorators.csrf import csrf_exempt
 import json
 from .ai_chatbot import (
     generate_ai_response,
@@ -9,7 +8,7 @@ from django.shortcuts import render
 from chatbot.services.chatbot_service import get_ai_chat_response
 from django.contrib.auth.decorators import login_required
 
-@csrf_exempt
+@login_required
 def chatbot_response(request):
     if request.method != "POST":
         return JsonResponse({"error": "Method not allowed"}, status=405)

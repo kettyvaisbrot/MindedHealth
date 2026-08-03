@@ -68,7 +68,7 @@ urlpatterns = [
     path("family-member/", family_member_page, name="family_member_page"),
     path("what_interested_you/", include("what_interested_you.urls")),
     path("keep-alive/", keep_alive, name="keep_alive"),
-    path("chat/<str:room_name>/", login_required(room), name="chat_room"),
+    path("chat/", login_required(room), name="chat_room"),
     path("chatbot/", include("chatbot.urls")),
     path('swagger/', schema_view.with_ui('swagger', cache_timeout=0), name='schema-swagger-ui'),
     path("insights/", include("insights.urls")),

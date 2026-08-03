@@ -1,7 +1,6 @@
 from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib.auth.decorators import login_required
 from .models import User, TherapistProfile, FamilyMemberProfile, PatientProfile
-import re
 from django.contrib.auth import login, logout
 from django.http import JsonResponse
 from django.views.decorators.csrf import csrf_protect
@@ -11,6 +10,7 @@ from django.views.decorators.http import require_http_methods
 from django_ratelimit.decorators import ratelimit
 from django.contrib.auth import get_user_model
 from users.forms import CustomUserCreationForm, CustomAuthenticationForm
+from chat.services import get_room_name_for_user
 User = get_user_model()
 
 @login_required
@@ -102,8 +102,9 @@ def features(request):
     return render(request, 'features.html')
 
 @require_http_methods(["GET"])
-def room(request, room_name):
-    if not re.match(r'^[\w-]+$', room_name):
+def room(request):
+    room_name = get_room_name_for_user(request.user)
+    if room_name is None:
         return redirect("home")
     return render(request, "chat/room.html", {"room_name": room_name})
 

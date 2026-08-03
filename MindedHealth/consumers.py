@@ -4,7 +4,10 @@ import html
 import logging
 import time
 from channels.generic.websocket import AsyncWebsocketConsumer
+from channels.db import database_sync_to_async
 from collections import defaultdict
+
+from chat.services import get_or_create_pseudonym, get_room_name_for_user
 
 logger = logging.getLogger(__name__)
 
@@ -36,6 +39,20 @@ class ChatConsumer(AsyncWebsocketConsumer):
             await self.close(code=4001)  # unauthorized
             return
 
+        # Role -> room enforcement. This is the real security boundary: a raw
+        # WebSocket connection never goes through the `room` HTTP view, so the
+        # room name in the URL can't be trusted just because it looks right --
+        # a client could open a socket straight to /ws/chat/patient/ regardless
+        # of their actual role.
+        if get_room_name_for_user(self.scope["user"]) != self.room_name:
+            await self.close(code=4003)  # forbidden
+            return
+
+        # Auto-generated, day-stable display name -- never the real username.
+        self.pseudonym = await database_sync_to_async(get_or_create_pseudonym)(
+            self.scope["user"], self.room_name
+        )
+
         # Join room group
         await self.channel_layer.group_add(self.room_group_name, self.channel_name)
         await self.accept()
@@ -43,7 +60,8 @@ class ChatConsumer(AsyncWebsocketConsumer):
         if self.room_group_name not in ChatConsumer.rooms_users:
             ChatConsumer.rooms_users[self.room_group_name] = {}
 
-        ChatConsumer.rooms_users[self.room_group_name][self.channel_name] = self.scope["user"].username
+        ChatConsumer.rooms_users[self.room_group_name][self.channel_name] = self.pseudonym
+        await self.send(text_data=json.dumps({"type": "your_pseudonym", "pseudonym": self.pseudonym}))
         await self.send_user_list()
 
     async def disconnect(self, close_code):
@@ -54,7 +72,8 @@ class ChatConsumer(AsyncWebsocketConsumer):
         await self.channel_layer.group_discard(self.room_group_name, self.channel_name)
 
     async def receive(self, text_data):
-        user = self.scope["user"].username
+        # Internal-only identity, for rate limiting and server logs -- never sent to any client.
+        real_user_key = self.scope["user"].username
         now = time.time()
 
         try:
@@ -65,11 +84,11 @@ class ChatConsumer(AsyncWebsocketConsumer):
                 raise KeyError('Missing "message" in received data')
 
             # Rate limiting
-            if now - ChatConsumer.user_last_message_time[user] < RATE_LIMIT_SECONDS:
-                logger.warning(f"Rate limit exceeded for {user}")
+            if now - ChatConsumer.user_last_message_time[real_user_key] < RATE_LIMIT_SECONDS:
+                logger.warning(f"Rate limit exceeded for {real_user_key}")
                 return
 
-            ChatConsumer.user_last_message_time[user] = now
+            ChatConsumer.user_last_message_time[real_user_key] = now
 
             # Escape message for XSS prevention
             message = html.escape(text_data_json["message"])
@@ -83,23 +102,23 @@ class ChatConsumer(AsyncWebsocketConsumer):
                 message = message.replace(badword, "*" * len(badword))
 
             current_time = datetime.datetime.now().strftime("%I:%M:%S %p")
-            logger.info(f"Message in {self.room_name} from {user}")
+            logger.info(f"Message in {self.room_name} from {real_user_key}")
 
-            # Broadcast message to room
+            # Broadcast message to room -- pseudonym only, never the real identity.
             await self.channel_layer.group_send(
                 self.room_group_name,
                 {
                     "type": "chat_message",
                     "message": message,
-                    "user": user,
+                    "user": self.pseudonym,
                     "time": current_time,
                 },
             )
 
         except json.JSONDecodeError:
-            logger.warning(f"Invalid JSON from {user}")
+            logger.warning(f"Invalid JSON from {real_user_key}")
         except KeyError as e:
-            logger.warning(f"Missing key in message from {user}: {e}")
+            logger.warning(f"Missing key in message from {real_user_key}: {e}")
 
     async def send_user_list(self):
         user_list = list(ChatConsumer.rooms_users.get(self.room_group_name, {}).values())
