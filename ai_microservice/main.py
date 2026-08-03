@@ -1,3 +1,4 @@
+import hmac
 import os
 import logging
 import time
@@ -26,7 +27,7 @@ class PromptInput(BaseModel):
 
 
 def verify_internal_key(x_internal_key: Optional[str] = Header(None)):
-    if not x_internal_key or x_internal_key != INTERNAL_API_KEY:
+    if not x_internal_key or not hmac.compare_digest(x_internal_key, INTERNAL_API_KEY):
         logger.warning("Unauthorized request to ai_microservice: invalid or missing X-Internal-Key")
         raise HTTPException(status_code=401, detail="Unauthorized")
 

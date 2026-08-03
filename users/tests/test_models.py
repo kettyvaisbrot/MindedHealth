@@ -76,7 +76,7 @@ class UsersViewsTest(TestCase):
         self.patient_profile.save()
 
     def test_therapist_dashboard_access(self):
-        self.client.login(username='therapist1', password='pass')
+        self.client.force_login(self.therapist_user)
         response = self.client.get(reverse('therapist_dashboard'))
         self.assertEqual(response.status_code, 200)
         self.assertContains(response, 'therapist1')

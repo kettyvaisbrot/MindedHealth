@@ -10,6 +10,7 @@ https://docs.djangoproject.com/en/5.0/topics/settings/
 from pathlib import Path
 from dotenv import load_dotenv
 from datetime import timedelta
+from django.core.exceptions import ImproperlyConfigured
 import os
 
 load_dotenv()
@@ -25,17 +26,39 @@ STATIC_URL = "static/"
 # =======================
 # SECURITY SETTINGS
 # =======================
-DEBUG = os.getenv("DJANGO_DEBUG", "True").lower() in ["true", "1"]
-ALLOWED_HOSTS = os.getenv("DJANGO_ALLOWED_HOSTS", "*").split(",")
+# DJANGO_ENV must be explicitly set to "production" in production environments
+# (K8s manifests / prod.env). Anything else is treated as non-production and
+# gets safe local-dev defaults. This flag drives every hardened flag below.
+DJANGO_ENV = os.getenv("DJANGO_ENV", "development")
+IS_PRODUCTION = DJANGO_ENV == "production"
+
+DEBUG = os.getenv("DJANGO_DEBUG", "False").lower() in ["true", "1"]
+
+_allowed_hosts_env = os.getenv("DJANGO_ALLOWED_HOSTS")
+if _allowed_hosts_env:
+    ALLOWED_HOSTS = [h.strip() for h in _allowed_hosts_env.split(",") if h.strip()]
+elif DEBUG:
+    ALLOWED_HOSTS = ["localhost", "127.0.0.1"]
+else:
+    raise ImproperlyConfigured(
+        "DJANGO_ALLOWED_HOSTS must be set when DJANGO_DEBUG is False."
+    )
+
 SECRET_KEY = os.getenv("DJANGO_SECRET_KEY")
-SECURE_SSL_REDIRECT = False
 
-SESSION_COOKIE_SECURE = False
-CSRF_COOKIE_SECURE = False
+# Behind the AWS ALB, TLS terminates at the load balancer and requests reach
+# Django as plain HTTP with X-Forwarded-Proto set. This tells Django to trust
+# that header instead of the raw connection scheme when deciding "is this
+# request secure" (redirects, secure cookies).
+SECURE_PROXY_SSL_HEADER = ("HTTP_X_FORWARDED_PROTO", "https") if IS_PRODUCTION else None
+SECURE_SSL_REDIRECT = IS_PRODUCTION
 
-SECURE_HSTS_SECONDS = 0
-SECURE_HSTS_INCLUDE_SUBDOMAINS = False
-SECURE_HSTS_PRELOAD = False
+SESSION_COOKIE_SECURE = IS_PRODUCTION
+CSRF_COOKIE_SECURE = IS_PRODUCTION
+
+SECURE_HSTS_SECONDS = 31536000 if IS_PRODUCTION else 0
+SECURE_HSTS_INCLUDE_SUBDOMAINS = IS_PRODUCTION
+SECURE_HSTS_PRELOAD = IS_PRODUCTION
 
 X_FRAME_OPTIONS = 'DENY'
 EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
@@ -72,12 +95,14 @@ INSTALLED_APPS = [
     "silk",
     "rest_framework.authtoken",
     "chatbot",
+    "chat",
     "channels",
     "dashboard",
     "medications",
     "my_statistics",
     "what_interested_you",
     "dashboard.templatetags.custom_filters",
+    "axes",
     "django.contrib.admin",
     "django.contrib.auth",
     "django.contrib.contenttypes",
@@ -85,6 +110,28 @@ INSTALLED_APPS = [
     "django.contrib.messages",
     "django.contrib.staticfiles",
 ]
+
+# =======================
+# BRUTE-FORCE PROTECTION (django-axes)
+# =======================
+# Hooks into Django's authenticate() at the AUTHENTICATION_BACKENDS layer, so it
+# covers every login entry point (login_view, /api-token-auth/, /api/token/)
+# without needing a per-view decorator.
+#
+# Lockout key is (username, ip_address) together, not username alone: locking by
+# username alone lets an attacker deny service to a real user just by failing
+# their password repeatedly from anywhere (NIST SP 800-63B calls this out
+# explicitly). Requiring both means an attacker has to be failing from the
+# victim's own IP to lock them out.
+AUTHENTICATION_BACKENDS = [
+    "axes.backends.AxesBackend",
+    "django.contrib.auth.backends.ModelBackend",
+]
+
+AXES_FAILURE_LIMIT = 5
+AXES_LOCKOUT_PARAMETERS = [["username", "ip_address"]]
+AXES_COOLOFF_TIME = 1  # hours
+AXES_RESET_ON_SUCCESS = True
 
 REST_FRAMEWORK = {
     # Authentication
@@ -228,6 +275,7 @@ MIDDLEWARE = [
     "django.contrib.auth.middleware.AuthenticationMiddleware",
     "django.contrib.messages.middleware.MessageMiddleware",
     "django.middleware.clickjacking.XFrameOptionsMiddleware",
+    "axes.middleware.AxesMiddleware",
 ]
 
 ROOT_URLCONF = "MindedHealth.urls"

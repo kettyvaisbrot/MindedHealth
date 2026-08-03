@@ -77,15 +77,10 @@
     <div class="container">
         <h2>Chat Room</h2>
         <p><a href="{% url 'home' %}"><button>Back to Home</button></a></p>
+        <p>You are chatting as: <strong id="my-pseudonym">connecting…</strong></p>
 
-        <div id="pseudonym-section">
-            <label for="pseudonym">Enter your pseudonym:</label>
-            <input type="text" id="pseudonym" placeholder="Your Name" required>
-            <button id="join-chat">Join Chat</button>
-        </div>
-
-        <textarea id="chat-log" readonly style="height: 300px;" hidden></textarea>
-        <input type="text" id="chat-message-input" placeholder="Type a message..." hidden>
+        <textarea id="chat-log" readonly style="height: 300px;"></textarea>
+        <input type="text" id="chat-message-input" placeholder="Type a message...">
 
         <div id="user-list" class="user-list"></div>
     </div>
@@ -94,12 +89,15 @@
         let userList = [];
 
         document.addEventListener('DOMContentLoaded', function () {
-            const chatSocket = new WebSocket('ws://' + window.location.host + '/ws/chat/general/');
+            const wsProtocol = window.location.protocol === 'https:' ? 'wss://' : 'ws://';
+            const chatSocket = new WebSocket(wsProtocol + window.location.host + '/ws/chat/{{ room_name|escapejs }}/');
 
             chatSocket.onmessage = function(e) {
                 const data = JSON.parse(e.data);
 
-                if (data.users) {
+                if (data.type === 'your_pseudonym') {
+                    document.querySelector('#my-pseudonym').textContent = data.pseudonym;
+                } else if (data.users) {
                     userList = data.users;
                     console.log('User list:', userList);
                 } else {
@@ -109,22 +107,6 @@
                 }
             };
 
-            document.querySelector('#join-chat').addEventListener('click', function () {
-                const pseudonym = document.querySelector('#pseudonym').value.trim();
-                if (!pseudonym) {
-                    alert('Please enter a pseudonym.');
-                    return;
-                }
-
-                document.querySelector('#pseudonym-section').style.display = 'none';
-                document.querySelector('#chat-log').hidden = false;
-                document.querySelector('#chat-message-input').hidden = false;
-
-                chatSocket.send(JSON.stringify({
-                    'user': pseudonym
-                }));
-            });
-
             document.querySelector('#chat-message-input').addEventListener('keyup', function(e) {
                 const messageInput = e.target;
                 const message = messageInput.value;
@@ -133,10 +115,9 @@
                     showUserList();
                 }
 
-                if (e.key === 'Enter') {
+                if (e.key === 'Enter' && message.trim()) {
                     chatSocket.send(JSON.stringify({
-                        'message': message,
-                        'user': document.querySelector('#pseudonym').value
+                        'message': message
                     }));
 
                     messageInput.value = '';

@@ -30,8 +30,11 @@ spec:
               memory: "512Mi"
 
           env:
+            - name: DJANGO_ENV
+              value: "production"
+
             - name: DJANGO_ALLOWED_HOSTS
-              value: "*,a919efb57cd1347cb95609d34137c97f-1434627449.us-east-1.elb.amazonaws.com"
+              value: "a919efb57cd1347cb95609d34137c97f-1434627449.us-east-1.elb.amazonaws.com"
 
             - name: REDIS_HOST
               value: "redis"
@@ -43,14 +46,20 @@ spec:
             - name: DB_USER
               value: "mindedhealth_user"
             - name: DB_PASSWORD
-              value: "super-secure-password"
+              valueFrom:
+                secretKeyRef:
+                  name: django-secrets
+                  key: DB_PASSWORD
             - name: DB_PORT
               value: "5432"
 
             - name: EMAIL_HOST_USER
               value: "kettyvaisbrot@gmail.com"
             - name: EMAIL_HOST_PASSWORD
-              value: "iczb buab clur axtx"
+              valueFrom:
+                secretKeyRef:
+                  name: django-secrets
+                  key: EMAIL_HOST_PASSWORD
 
             - name: AI_SERVICE_URL
               value: "http://ai-microservice:8001"
