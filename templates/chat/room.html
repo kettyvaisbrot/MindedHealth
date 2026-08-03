@@ -87,25 +87,70 @@
 
     <script>
         let userList = [];
+        let oldestMessageId = null;
+        let hasMoreHistory = false;
+        let isLoadingHistory = false;
+
+        function formatMessage(pseudonym, message, time) {
+            return `[${time}] ${pseudonym}: ${message}\n`;
+        }
 
         document.addEventListener('DOMContentLoaded', function () {
             const wsProtocol = window.location.protocol === 'https:' ? 'wss://' : 'ws://';
             const chatSocket = new WebSocket(wsProtocol + window.location.host + '/ws/chat/{{ room_name|escapejs }}/');
+            const chatLog = document.querySelector('#chat-log');
 
             chatSocket.onmessage = function(e) {
                 const data = JSON.parse(e.data);
 
                 if (data.type === 'your_pseudonym') {
                     document.querySelector('#my-pseudonym').textContent = data.pseudonym;
+                } else if (data.type === 'history') {
+                    const text = data.messages.map(m => formatMessage(m.pseudonym, m.message, m.time)).join('');
+
+                    if (oldestMessageId === null) {
+                        // First page, on connect: fill the log and jump to the newest message.
+                        chatLog.value = text;
+                        chatLog.scrollTop = chatLog.scrollHeight;
+                    } else {
+                        // An older page, requested by scrolling up: prepend it while keeping
+                        // the reader's current position, instead of yanking them to the top.
+                        const previousHeight = chatLog.scrollHeight;
+                        chatLog.value = text + chatLog.value;
+                        chatLog.scrollTop = chatLog.scrollHeight - previousHeight;
+                    }
+
+                    if (data.messages.length > 0) {
+                        oldestMessageId = data.messages[0].id;
+                    }
+                    hasMoreHistory = data.has_more;
+                    isLoadingHistory = false;
                 } else if (data.users) {
                     userList = data.users;
                     console.log('User list:', userList);
                 } else {
-                    const chatLog = document.querySelector('#chat-log');
-                    chatLog.value += `[${data.time}] ${data.user}: ${data.message}\n`;
+                    chatLog.value += formatMessage(data.user, data.message, data.time);
                     chatLog.scrollTop = chatLog.scrollHeight;
                 }
             };
+
+            chatSocket.onclose = function(event) {
+                if (event.code === 4000) {
+                    // The chat day ended -- silently return home; re-entering the room
+                    // gets a fresh pseudonym for the new day automatically.
+                    window.location.href = '/';
+                }
+            };
+
+            chatLog.addEventListener('scroll', function() {
+                if (chatLog.scrollTop === 0 && hasMoreHistory && !isLoadingHistory) {
+                    isLoadingHistory = true;
+                    chatSocket.send(JSON.stringify({
+                        action: 'load_history',
+                        before_id: oldestMessageId,
+                    }));
+                }
+            });
 
             document.querySelector('#chat-message-input').addEventListener('keyup', function(e) {
                 const messageInput = e.target;
