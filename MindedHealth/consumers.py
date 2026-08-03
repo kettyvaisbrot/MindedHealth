@@ -140,3 +140,9 @@ class ChatConsumer(AsyncWebsocketConsumer):
         await self.send(
             text_data=json.dumps({"users": event["users"]})
         )
+
+    async def day_ended(self, event):
+        # Triggered by chat.tasks.end_chat_day via group_send at 23:59 Asia/Jerusalem.
+        # Silent, no message payload -- the client distinguishes this from any
+        # other disconnect purely by the close code.
+        await self.close(code=4000)
