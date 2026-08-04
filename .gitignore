@@ -18,6 +18,9 @@ github_ec2.pub
 *.tfstate
 *.tfstate.backup
 *.tfvars
+tfplan.out
+*.local.txt
+*.local.ps1
 .terraform.lock.hcl
 terraform/.terraform/
 .kube/

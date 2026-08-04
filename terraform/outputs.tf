@@ -1,15 +1,11 @@
-output "eks_cluster_name" {
-  description = "EKS cluster name"
-  value       = module.eks.cluster_name
+output "app_public_ip" {
+  description = "Elastic IP of the app server"
+  value       = aws_eip.app.public_ip
 }
 
-output "eks_cluster_endpoint" {
-  description = "EKS cluster endpoint"
-  value       = module.eks.cluster_endpoint
-}
-
-output "eks_cluster_certificate_authority_data" {
-  value = module.eks.cluster_certificate_authority_data
+output "app_instance_id" {
+  description = "Instance ID – used with 'aws ssm start-session --target <id>' to connect"
+  value       = aws_instance.app.id
 }
 
 output "rds_endpoint" {
