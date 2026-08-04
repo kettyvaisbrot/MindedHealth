@@ -16,7 +16,7 @@ services:
     restart: unless-stopped
 
   django:
-    image: kettyvaisbrot/mindedhealth-django:v7
+    image: kettyvaisbrot/mindedhealth-django:v8
     restart: unless-stopped
     env_file: .env
     depends_on:
@@ -35,7 +35,7 @@ services:
       - redis
 
   celery-worker:
-    image: kettyvaisbrot/mindedhealth-django:v7
+    image: kettyvaisbrot/mindedhealth-django:v8
     restart: unless-stopped
     env_file: .env
     depends_on:
@@ -43,7 +43,7 @@ services:
     command: celery -A MindedHealth worker --loglevel=info
 
   celery-beat:
-    image: kettyvaisbrot/mindedhealth-django:v7
+    image: kettyvaisbrot/mindedhealth-django:v8
     restart: unless-stopped
     env_file: .env
     depends_on:

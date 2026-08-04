@@ -23,6 +23,7 @@ AUTH_USER_MODEL = "users.User"
 # =======================
 STATIC_ROOT = os.environ.get('STATIC_ROOT', os.path.join(BASE_DIR, 'staticfiles'))
 STATIC_URL = "static/"
+STATICFILES_STORAGE = "whitenoise.storage.CompressedStaticFilesStorage"
 
 # =======================
 # SECURITY SETTINGS
@@ -274,6 +275,7 @@ INTERNAL_JWT_LIFETIME_SECONDS = 60  # seconds; intentionally short — internal 
 MIDDLEWARE = [
     "silk.middleware.SilkyMiddleware",
     "django.middleware.security.SecurityMiddleware",
+    "whitenoise.middleware.WhiteNoiseMiddleware",
     "django.contrib.sessions.middleware.SessionMiddleware",
     "MindedHealth.middleware.LogoutOnServerStartMiddleware",
     "django.middleware.common.CommonMiddleware",
