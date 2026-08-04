@@ -82,7 +82,7 @@ class UsersViewsTest(TestCase):
         self.assertContains(response, 'therapist1')
 
     def test_family_dashboard_access(self):
-        self.client.login(username='family1', password='pass')
+        self.client.force_login(self.family_user)
         response = self.client.get(reverse('family_dashboard', args=[self.family_profile.id]))
         self.assertEqual(response.status_code, 200)
         self.assertContains(response, 'family1')

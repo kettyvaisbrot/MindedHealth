@@ -11,6 +11,7 @@ jobs:
 
     env:
       DJANGO_DEBUG: "True"
+      DJANGO_SECRET_KEY: "ci-throwaway-secret-key-not-used-anywhere-real"
       REDIS_HOST: "localhost"
       REDIS_PORT: "6379"
 
