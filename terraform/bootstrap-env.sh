@@ -1,17 +1,17 @@
 #!/bin/bash
-# Runs ON the EC2 instance (via SSM) - pulls secrets from Parameter Store into
+# Runs ON the EC2 instance (via SSM) - pulls secrets from Secrets Manager into
 # /home/ec2-user/app/.env, then the rest of the config alongside it.
 set -euo pipefail
 
 REGION="us-east-1"
-PREFIX="/mindedhealth"
+PREFIX="mindedhealth"
 APP_DIR="/home/ec2-user/app"
 ENV_FILE="$APP_DIR/.env"
 
 mkdir -p "$APP_DIR"
 
 get_secret() {
-  aws ssm get-parameter --region "$REGION" --name "$PREFIX/$1" --with-decryption --query "Parameter.Value" --output text
+  aws secretsmanager get-secret-value --region "$REGION" --secret-id "$PREFIX/$1" --query "SecretString" --output text
 }
 
 DB_PASSWORD=$(get_secret DB_PASSWORD)
