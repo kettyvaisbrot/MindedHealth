@@ -27,20 +27,8 @@ variable "db_name" {
   default     = "mindedhealth"
 }
 
-variable "eks_cluster_version" {
-  description = "Kubernetes version for EKS"
+variable "app_instance_type" {
+  description = "Instance type for the single app server (runs all services via Docker Compose)"
   type        = string
-  default     = "1.30"
-}
-
-variable "eks_node_instance_type" {
-  description = "Instance type for EKS nodes"
-  type        = string
-  default     = "t3.medium"
-}
-
-variable "eks_desired_capacity" {
-  description = "Desired number of worker nodes"
-  type        = number
-  default     = 2
+  default     = "t3.micro"
 }

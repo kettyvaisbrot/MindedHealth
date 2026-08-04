@@ -10,6 +10,7 @@ https://docs.djangoproject.com/en/5.0/topics/settings/
 from pathlib import Path
 from dotenv import load_dotenv
 from datetime import timedelta
+from celery.schedules import crontab
 from django.core.exceptions import ImproperlyConfigured
 import os
 
@@ -83,6 +84,11 @@ LANGUAGE_CODE = 'en-us'
 GOOGLE_SEARCH_API_KEY = os.getenv("GOOGLE_SEARCH_API_KEY")
 GOOGLE_SEARCH_CSE_ID = os.getenv("GOOGLE_SEARCH_CSE_ID")
 OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
+
+# Encrypts ChatMessage.content at rest (chat/fields.py). In production this
+# lives in the django-secrets K8s Secret, alongside DB_PASSWORD and
+# EMAIL_HOST_PASSWORD -- never committed to git.
+CHAT_MESSAGE_ENCRYPTION_KEY = os.getenv("CHAT_MESSAGE_ENCRYPTION_KEY", "")
 
 # =======================
 # APPLICATION DEFINITION
@@ -362,6 +368,16 @@ CHANNEL_LAYERS = {
 }
 
 CELERY_BROKER_URL = REDIS_URL
+
+# The schedule time (23:59) is meaningless unless interpreted in the same
+# timezone the chat day boundary itself uses -- see chat/services.py get_chat_day().
+CELERY_TIMEZONE = "Asia/Jerusalem"
+CELERY_BEAT_SCHEDULE = {
+    "end-chat-day": {
+        "task": "chat.tasks.end_chat_day",
+        "schedule": crontab(hour=23, minute=59),
+    },
+}
 CACHES = {
     "default": {
         "BACKEND": "django_redis.cache.RedisCache",

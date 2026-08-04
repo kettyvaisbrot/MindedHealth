@@ -7,7 +7,8 @@ from channels.generic.websocket import AsyncWebsocketConsumer
 from channels.db import database_sync_to_async
 from collections import defaultdict
 
-from chat.services import get_or_create_pseudonym, get_room_name_for_user
+from chat.models import ChatMessage
+from chat.services import get_chat_day, get_history_page, get_or_create_pseudonym, get_room_name_for_user
 
 logger = logging.getLogger(__name__)
 
@@ -62,6 +63,10 @@ class ChatConsumer(AsyncWebsocketConsumer):
 
         ChatConsumer.rooms_users[self.room_group_name][self.channel_name] = self.pseudonym
         await self.send(text_data=json.dumps({"type": "your_pseudonym", "pseudonym": self.pseudonym}))
+
+        messages, has_more = await database_sync_to_async(get_history_page)(self.room_name)
+        await self.send(text_data=json.dumps({"type": "history", "messages": messages, "has_more": has_more}))
+
         await self.send_user_list()
 
     async def disconnect(self, close_code):
@@ -78,6 +83,16 @@ class ChatConsumer(AsyncWebsocketConsumer):
 
         try:
             text_data_json = json.loads(text_data)
+
+            if text_data_json.get("action") == "load_history":
+                before_id = text_data_json.get("before_id")
+                messages, has_more = await database_sync_to_async(get_history_page)(
+                    self.room_name, before_id=before_id
+                )
+                await self.send(text_data=json.dumps(
+                    {"type": "history", "messages": messages, "has_more": has_more}
+                ))
+                return
 
             # Validate presence of message key
             if "message" not in text_data_json:
@@ -103,6 +118,14 @@ class ChatConsumer(AsyncWebsocketConsumer):
 
             current_time = datetime.datetime.now().strftime("%I:%M:%S %p")
             logger.info(f"Message in {self.room_name} from {real_user_key}")
+
+            await database_sync_to_async(ChatMessage.objects.create)(
+                user=self.scope["user"],
+                pseudonym=self.pseudonym,
+                room_name=self.room_name,
+                chat_day=get_chat_day(),
+                content=message,
+            )
 
             # Broadcast message to room -- pseudonym only, never the real identity.
             await self.channel_layer.group_send(
@@ -140,3 +163,9 @@ class ChatConsumer(AsyncWebsocketConsumer):
         await self.send(
             text_data=json.dumps({"users": event["users"]})
         )
+
+    async def day_ended(self, event):
+        # Triggered by chat.tasks.end_chat_day via group_send at 23:59 Asia/Jerusalem.
+        # Silent, no message payload -- the client distinguishes this from any
+        # other disconnect purely by the close code.
+        await self.close(code=4000)

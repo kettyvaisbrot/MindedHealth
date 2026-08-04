@@ -5,7 +5,37 @@
 **פיצ'ר:** Chat Message Persistence with Day-Boundary Retention
 **מערכת:** MindedHealth — Django 5.1 + Channels 4.2 + Redis + PostgreSQL/SQLite
 **מסמך מקור:** תהליך Feature Discovery + Technical Planning אינטראקטיבי, המשך ל-`docs/features/feature_family_user_chat.md`
-**סטטוס:** מוכן לסקירה — טרם יושם
+**סטטוס:** PR 1-4 מומשו. הפריסה בפועל רצה ואומתה ב-production. ממתין למיזוג סופי של `feat/chat-message-persistence` ל-`main`.
+
+---
+
+## 0. סטטוס ביצוע (Implementation Status)
+
+| PR | תוכן | סטטוס |
+|---|---|---|
+| **PR 1 — Message Storage** | מודל `ChatMessage`, הצפנת שדה (`chat/encryption.py`, `chat/fields.py`), migration | ✅ **הושלם ומוזג** |
+| **PR 2 — Scheduled Retention** | `MindedHealth/celery.py`, `CELERY_BEAT_SCHEDULE`, `chat/tasks.py::end_chat_day`, `ChatConsumer.day_ended` | ✅ **הושלם ומוזג** |
+| **PR 3 — History Delivery** | שמירת הודעות ב-`receive()`, `get_history_page` (`chat/services.py`), `load_history` action, `room.html` (גלילה אוטומטית + redirect על קוד 4000) | ✅ **הושלם ומוזג** |
+| **PR 4 — Deployment** | ראה פירוט למטה — הארכיטקטורה שונתה מהתכנון המקורי | ✅ **הושלם, אומת ב-production** |
+
+### שינוי ארכיטקטורה מהותי ב-PR 4
+
+התוכנית המקורית הניחה חזרה ל-EKS (הקלאסטר שהיה קיים לפני תחילת הפרויקט). בפועל, כשהגישה ל-AWS חזרה, התברר שכל התשתית (EKS, RDS, Load Balancer) **נמחקה במכוון לחיסכון בעלויות** בזמן שהגישה הייתה חסומה. מכיוון שאין כרגע משתמשים אמיתיים במערכת, הוחלט **לא** לשחזר EKS (עלות control plane קבועה של כ-$73/חודש בלי קשר לעומס), אלא לעבור לארכיטקטורה מינימלית:
+
+- **EC2 יחיד** (`t3.micro`) עם **Docker Compose**, מריץ את כל 6 השירותים (Django/daphne, AI microservice, insights_service — נפרס לראשונה אי-פעם, Redis, Celery worker, Celery beat)
+- **Caddy** כ-reverse proxy, עם HTTPS אוטומטי ואמיתי (Let's Encrypt) דרך `sslip.io` (אין domain רשום)
+- **RDS** (db.t3.micro) נשאר משאב מנוהל נפרד, לא container
+- **Parameter Store** (AWS SSM) במקום K8s Secrets לניהול סודות
+- **גישה לשרת** דרך SSM Session Manager בלבד — אין SSH פתוח
+- קבצי ה-`k8s/*.yaml` (כולל celery-worker/beat שנכתבו קודם) **נשארו בגיט כרפרנס** לכשהמערכת תצמח ותצדיק חזרה ל-K8s, אך אינם בשימוש כרגע
+
+**Terraform** (`terraform/main.tf`) נכתב מחדש בהתאם: הוסר `module "eks"`, הוסר NAT Gateway (nodes/EC2 ב-subnet ציבורי), נוסף `aws_instance` + IAM role ל-SSM ול-Parameter Store.
+
+**באגים שהתגלו ותוקנו תוך כדי הפריסה בפועל** (לא היו ידועים לפני שרץ קוד אמיתי על שרת production):
+1. `Dockerfile` הראשי הריץ Django עם `gunicorn` מול ה-**WSGI** app — אבל כל הצ'אט עובד על WebSocket דרך **ASGI**. תוקן ל-`daphne` מול `MindedHealth.asgi:application`.
+2. `MindedHealth/asgi.py` ייבא את `routing`/`consumers`/`chat.models` **לפני** ש-Django אתחל את מאגר האפליקציות שלו — קרס עם `AppRegistryNotReady` בכל הרצה תחת daphne (לא נתפס קודם כי `manage.py runserver` תמיד אתחל Django לפני כן). תוקן.
+3. `t3.micro` (1GB RAM) עם 6 קונטיינרים נגמר לו הזיכרון בזמן migration וגרם ל-SSM agent עצמו להיתקע (`ConnectionLost`) — נפתר בהוספת 1GB swap file בשרת.
+4. `SECURE_SSL_REDIRECT=True` (מהקשחת האבטחה המוקדמת) הניח קיום reverse proxy עם TLS — נשבר לגמרי בלי Caddy. נפתר בהוספת Caddy כשכבת TLS termination, תוך ניצול `SECURE_PROXY_SSL_HEADER` שכבר היה מוגדר נכון מראש.
 
 ---
 
@@ -256,3 +286,39 @@ Celery Beat → Celery task (chat/tasks.py)
 - [x] אין הנחה שמוצגת כעובדה — כל נקודה עמומה עברה דרך שאלת הבהרה מפורשת.
 - [x] התוכנית ניתנת לביצוע ישיר (מספיק פירוט לכל שלב ב-Execution Order).
 - [x] מוכן למסירה לשלב פירוק ל-capabilities/milestones בפועל.
+
+---
+
+## נספח: מנגנון הגלילה האוטומטית (Infinite Scroll) — הסבר להצגה/דיבור
+
+תוסף למסמך, נכתב אחרי המימוש (PR 3), כדי שיהיה אפשר להסביר את המנגנון בלי לחזור לקוד.
+
+### שלושה משתנים בצד הלקוח (`templates/chat/room.html`)
+
+| משתנה | תפקיד |
+|---|---|
+| `oldestMessageId` | ה-ID של ההודעה **הכי ישנה** שמוצגת כרגע על המסך |
+| `hasMoreHistory` | האם יש עוד הודעות ישנות יותר שעדיין לא נטענו |
+| `isLoadingHistory` | "מנעול" זמני — מונע בקשת אותו עמוד פעמיים במקביל |
+
+### מתי זה מופעל
+
+יש מאזין (`addEventListener('scroll', ...)`) על תיבת ההודעות. בכל גלילה נבדק: האם המשתמש הגיע ממש לראש התיבה (`scrollTop === 0`) **וגם** יש עוד היסטוריה **וגם** אין כרגע טעינה פעילה? אם כן — נשלחת לשרת בקשה `{"action": "load_history", "before_id": <oldestMessageId>}`.
+
+### הטריק לשמירת מיקום הגלילה
+
+בעיה: אם פשוט "מדביקים" הודעות ישנות בראש התיבה, המסך "קופץ" ומבלבל את הקורא. הפתרון (תבנית סטנדרטית להוספת תוכן בראש אזור גלילה):
+
+1. לפני ההוספה — שומרים את הגובה הנוכחי של כל התיבה: `const previousHeight = chatLog.scrollHeight;`
+2. מוסיפים את ההודעות החדשות **בראש** הטקסט הקיים.
+3. מזיזים את מיקום הגלילה בדיוק בהפרש: `chatLog.scrollTop = chatLog.scrollHeight - previousHeight;`
+
+התוצאה: המשתמש נשאר מסתכל על **אותה הודעה בדיוק** שהיה עליה לפני הטעינה — רק שעכשיו יש תוכן נוסף מעליה, זמין לגלילה נוספת.
+
+### זרימה מלאה (מה-connect ועד גלילה)
+
+1. חיבור ל-חדר → שרת שולח אוטומטית עמוד ראשון (10 הודעות אחרונות, מהישן לחדש בתוך העמוד) עם `type: "history"`.
+2. הלקוח ממלא את `oldestMessageId` מההודעה הראשונה בעמוד, ואת `hasMoreHistory` מהשדה `has_more`.
+3. משתמש גולל למעלה → אם `hasMoreHistory` נכון, נשלחת בקשת `load_history` עם ה-`before_id` הנוכחי.
+4. השרת מחזיר את העמוד הבא (10 הודעות ישנות יותר, עדיין מהישן לחדש בתוך העמוד) — הלקוח מוסיף אותן בראש, בעזרת הטריק לשמירת מיקום הגלילה, ומעדכן שוב את `oldestMessageId` ו-`hasMoreHistory`.
+5. כשה-`has_more` מגיע `false` — הגלילה למעלה כבר לא מפעילה עוד בקשות (כי `hasMoreHistory` הוא `false`).

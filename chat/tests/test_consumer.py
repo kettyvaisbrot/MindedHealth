@@ -44,6 +44,11 @@ def test_consumer_never_sends_the_real_username_over_the_wire(user, settings):
         assert my_pseudonym != user.username
         assert user.username not in my_pseudonym
 
+        history = await communicator.receive_json_from()
+        assert history["type"] == "history"
+        assert history["messages"] == []
+        assert history["has_more"] is False
+
         await communicator.receive_json_from()  # the initial user_list_update
 
         await communicator.send_json_to({"message": "hello from a real user"})

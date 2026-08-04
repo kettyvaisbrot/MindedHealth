@@ -4,7 +4,9 @@ from zoneinfo import ZoneInfo
 from django.db import IntegrityError, transaction
 from django.utils import timezone
 
-from .models import PseudonymAssignment
+from .models import ChatMessage, PseudonymAssignment
+
+HISTORY_PAGE_SIZE = 10
 
 CHAT_TIMEZONE = ZoneInfo("Asia/Jerusalem")
 
@@ -86,3 +88,30 @@ def get_or_create_pseudonym(user, room_name):
         f"Could not generate a unique pseudonym for room '{room_name}' "
         f"after {_MAX_GENERATION_ATTEMPTS} attempts"
     )
+
+
+def get_history_page(room_name, before_id=None, page_size=HISTORY_PAGE_SIZE):
+    """
+    Returns (messages, has_more) for one page of chat history, newest-first
+    query but returned oldest-to-newest within the page (so the client can
+    render/prepend it directly without re-sorting).
+    """
+    qs = ChatMessage.objects.filter(room_name=room_name)
+    if before_id is not None:
+        qs = qs.filter(id__lt=before_id)
+
+    rows = list(qs.order_by("-created_at")[: page_size + 1])
+    has_more = len(rows) > page_size
+    rows = rows[:page_size]
+    rows.reverse()
+
+    messages = [
+        {
+            "id": row.id,
+            "pseudonym": row.pseudonym,
+            "message": row.content,
+            "time": row.created_at.strftime("%I:%M:%S %p"),
+        }
+        for row in rows
+    ]
+    return messages, has_more

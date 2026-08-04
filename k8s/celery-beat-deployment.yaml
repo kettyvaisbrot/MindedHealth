@@ -1,34 +1,36 @@
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: django-app
+  name: celery-beat
   labels:
-    app: django
+    app: celery-beat
 spec:
-  replicas: 2
+  replicas: 1  # exactly one -- a second replica would fire every scheduled task twice
   selector:
     matchLabels:
-      app: django
+      app: celery-beat
   template:
     metadata:
       labels:
-        app: django
+        app: celery-beat
     spec:
       containers:
-        - name: django-app
+        - name: celery-beat
           image: kettyvaisbrot/mindedhealth-django:v5
           imagePullPolicy: Always
+          command: ["celery", "-A", "MindedHealth", "beat", "--loglevel=info"]
 
-          ports:
-            - containerPort: 8000
           resources:
             requests:
-              cpu: "100m"
-              memory: "256Mi"
+              cpu: "50m"
+              memory: "128Mi"
             limits:
-              cpu: "500m"
-              memory: "512Mi"
+              cpu: "200m"
+              memory: "256Mi"
 
+          # Same reasoning as celery-worker-deployment.yaml: beat only needs
+          # enough to boot Django and read CELERY_BEAT_SCHEDULE, it never
+          # touches ChatMessage content or the database directly.
           env:
             - name: DJANGO_ENV
               value: "production"
@@ -52,20 +54,3 @@ spec:
                   key: DB_PASSWORD
             - name: DB_PORT
               value: "5432"
-
-            - name: EMAIL_HOST_USER
-              value: "kettyvaisbrot@gmail.com"
-            - name: EMAIL_HOST_PASSWORD
-              valueFrom:
-                secretKeyRef:
-                  name: django-secrets
-                  key: EMAIL_HOST_PASSWORD
-
-            - name: CHAT_MESSAGE_ENCRYPTION_KEY
-              valueFrom:
-                secretKeyRef:
-                  name: django-secrets
-                  key: CHAT_MESSAGE_ENCRYPTION_KEY
-
-            - name: AI_SERVICE_URL
-              value: "http://ai-microservice:8001"
