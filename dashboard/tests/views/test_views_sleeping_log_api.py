@@ -2,7 +2,9 @@ import pytest
 from unittest.mock import patch, MagicMock
 from django.urls import reverse
 from rest_framework.test import APIClient
-from django.contrib.auth.models import User
+from django.contrib.auth import get_user_model
+
+User = get_user_model()
 from datetime import date
 
 @pytest.fixture

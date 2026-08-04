@@ -1,6 +1,8 @@
 import pytest
 from django.urls import reverse
-from django.contrib.auth.models import User
+from django.contrib.auth import get_user_model
+
+User = get_user_model()
 from django.contrib.messages import get_messages
 from django.utils import timezone
 from unittest.mock import patch

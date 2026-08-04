@@ -1,12 +1,15 @@
 import pytest
 from datetime import date, time
-from medications.models import Medication, MedicationIntakeLog
+from medications.models import Medication
+from dashboard.models import MedicationIntakeLog
 from dashboard.services.medication_service import (
     save_medication_log,
     get_next_dose_index,
     log_medication_entry,
 )
-from django.contrib.auth.models import User
+from django.contrib.auth import get_user_model
+
+User = get_user_model()
 from django.core.exceptions import ValidationError
 from django.shortcuts import Http404
 

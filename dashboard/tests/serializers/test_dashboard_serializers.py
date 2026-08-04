@@ -8,7 +8,9 @@ from dashboard.serializers import (
     SeizureLogSerializer,
 )
 from dashboard.models import FoodLog, SportLog, SleepingLog, Meetings, SeizureLog
-from django.contrib.auth.models import User
+from django.contrib.auth import get_user_model
+
+User = get_user_model()
 from datetime import date, time
 
 
