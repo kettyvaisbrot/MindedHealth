@@ -5,7 +5,7 @@
 **פיצ'ר:** Chat Message Persistence with Day-Boundary Retention
 **מערכת:** MindedHealth — Django 5.1 + Channels 4.2 + Redis + PostgreSQL/SQLite
 **מסמך מקור:** תהליך Feature Discovery + Technical Planning אינטראקטיבי, המשך ל-`docs/features/feature_family_user_chat.md`
-**סטטוס:** PR 1-3 מומשו ומוזגו ל-`feat/chat-message-persistence`. PR 4 (manifests) כתוב, ממתין להרצה. מיזוג סופי ל-`main` טרם בוצע.
+**סטטוס:** PR 1-4 מומשו. הפריסה בפועל רצה ואומתה ב-production. ממתין למיזוג סופי של `feat/chat-message-persistence` ל-`main`.
 
 ---
 
@@ -16,14 +16,26 @@
 | **PR 1 — Message Storage** | מודל `ChatMessage`, הצפנת שדה (`chat/encryption.py`, `chat/fields.py`), migration | ✅ **הושלם ומוזג** |
 | **PR 2 — Scheduled Retention** | `MindedHealth/celery.py`, `CELERY_BEAT_SCHEDULE`, `chat/tasks.py::end_chat_day`, `ChatConsumer.day_ended` | ✅ **הושלם ומוזג** |
 | **PR 3 — History Delivery** | שמירת הודעות ב-`receive()`, `get_history_page` (`chat/services.py`), `load_history` action, `room.html` (גלילה אוטומטית + redirect על קוד 4000) | ✅ **הושלם ומוזג** |
-| **PR 4 — Deployment Readiness** | `k8s/celery-worker-deployment.yaml`, `k8s/celery-beat-deployment.yaml` (חדשים), `k8s/django-deployment.yaml` מעודכן עם `CHAT_MESSAGE_ENCRYPTION_KEY` | ⚠️ **קוד כתוב, לא הורץ** — ממתין לגישת AWS |
+| **PR 4 — Deployment** | ראה פירוט למטה — הארכיטקטורה שונתה מהתכנון המקורי | ✅ **הושלם, אומת ב-production** |
 
-**מה נשאר בפועל ב-PR 4, כשתהיה גישה (בסדר הזה):**
-1. `kubectl create secret generic django-secrets --from-literal=CHAT_MESSAGE_ENCRYPTION_KEY=...` (מפתח **חדש** לפרודקשן — לא זהה למפתח המקומי ב-`.env`), בנוסף לערכים הקיימים שכבר תוכננו שם (`DB_PASSWORD`, `EMAIL_HOST_PASSWORD`).
-2. **להריץ migrations על ה-DB האמיתי** (`python manage.py migrate`, דרך `kubectl exec` לתוך pod או job נפרד) — הטבלאות `chat.PseudonymAssignment` ו-`chat.ChatMessage` עדיין לא קיימות ב-RDS האמיתי. **חובה לפני** השלב הבא — בלי זה האפליקציה תיפול ברגע שהקוד החדש יעלה, כי היא תנסה לשאול טבלאות שלא קיימות.
-3. `kubectl apply -f k8s/celery-worker-deployment.yaml -f k8s/celery-beat-deployment.yaml -f k8s/django-deployment.yaml`.
-4. `kubectl rollout restart deployment/django-app`.
-5. וידוא בלוגים ש-`celery-beat` אכן קלט את `end-chat-day` ל-schedule, ושה-`celery-worker` עלה בלי שגיאות חיבור.
+### שינוי ארכיטקטורה מהותי ב-PR 4
+
+התוכנית המקורית הניחה חזרה ל-EKS (הקלאסטר שהיה קיים לפני תחילת הפרויקט). בפועל, כשהגישה ל-AWS חזרה, התברר שכל התשתית (EKS, RDS, Load Balancer) **נמחקה במכוון לחיסכון בעלויות** בזמן שהגישה הייתה חסומה. מכיוון שאין כרגע משתמשים אמיתיים במערכת, הוחלט **לא** לשחזר EKS (עלות control plane קבועה של כ-$73/חודש בלי קשר לעומס), אלא לעבור לארכיטקטורה מינימלית:
+
+- **EC2 יחיד** (`t3.micro`) עם **Docker Compose**, מריץ את כל 6 השירותים (Django/daphne, AI microservice, insights_service — נפרס לראשונה אי-פעם, Redis, Celery worker, Celery beat)
+- **Caddy** כ-reverse proxy, עם HTTPS אוטומטי ואמיתי (Let's Encrypt) דרך `sslip.io` (אין domain רשום)
+- **RDS** (db.t3.micro) נשאר משאב מנוהל נפרד, לא container
+- **Parameter Store** (AWS SSM) במקום K8s Secrets לניהול סודות
+- **גישה לשרת** דרך SSM Session Manager בלבד — אין SSH פתוח
+- קבצי ה-`k8s/*.yaml` (כולל celery-worker/beat שנכתבו קודם) **נשארו בגיט כרפרנס** לכשהמערכת תצמח ותצדיק חזרה ל-K8s, אך אינם בשימוש כרגע
+
+**Terraform** (`terraform/main.tf`) נכתב מחדש בהתאם: הוסר `module "eks"`, הוסר NAT Gateway (nodes/EC2 ב-subnet ציבורי), נוסף `aws_instance` + IAM role ל-SSM ול-Parameter Store.
+
+**באגים שהתגלו ותוקנו תוך כדי הפריסה בפועל** (לא היו ידועים לפני שרץ קוד אמיתי על שרת production):
+1. `Dockerfile` הראשי הריץ Django עם `gunicorn` מול ה-**WSGI** app — אבל כל הצ'אט עובד על WebSocket דרך **ASGI**. תוקן ל-`daphne` מול `MindedHealth.asgi:application`.
+2. `MindedHealth/asgi.py` ייבא את `routing`/`consumers`/`chat.models` **לפני** ש-Django אתחל את מאגר האפליקציות שלו — קרס עם `AppRegistryNotReady` בכל הרצה תחת daphne (לא נתפס קודם כי `manage.py runserver` תמיד אתחל Django לפני כן). תוקן.
+3. `t3.micro` (1GB RAM) עם 6 קונטיינרים נגמר לו הזיכרון בזמן migration וגרם ל-SSM agent עצמו להיתקע (`ConnectionLost`) — נפתר בהוספת 1GB swap file בשרת.
+4. `SECURE_SSL_REDIRECT=True` (מהקשחת האבטחה המוקדמת) הניח קיום reverse proxy עם TLS — נשבר לגמרי בלי Caddy. נפתר בהוספת Caddy כשכבת TLS termination, תוך ניצול `SECURE_PROXY_SSL_HEADER` שכבר היה מוגדר נכון מראש.
 
 ---
 
