@@ -33,6 +33,7 @@ class FoodLogSerializer(DateNotInFutureMixin, serializers.ModelSerializer):
     class Meta:
         model = FoodLog
         fields = [
+            "user",
             "date",
             "breakfast_ate",
             "breakfast_time",
@@ -69,6 +70,7 @@ class SportLogSerializer(DateNotInFutureMixin, serializers.ModelSerializer):
     class Meta:
         model = SportLog
         fields = [
+            "user",
             "date",
             "did_sport",
             "sport_type",
@@ -126,6 +128,7 @@ class SleepingLogSerializer(serializers.ModelSerializer):
     class Meta:
         model = SleepingLog
         fields = [
+            "user",
             "went_to_sleep_yesterday",
             "wake_up_time",
         ]
@@ -142,6 +145,7 @@ class MeetingsSerializer(DateNotInFutureMixin, serializers.ModelSerializer):
     class Meta:
         model = Meetings
         fields = [
+            "user",
             "date",
             "time",
             "met_people",
@@ -162,6 +166,7 @@ class SeizureLogSerializer(DateNotInFutureMixin, serializers.ModelSerializer):
     class Meta:
         model = SeizureLog
         fields = [
+            "user",
             "date",
             "time",
             "duration_minutes",

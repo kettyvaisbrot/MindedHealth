@@ -228,3 +228,69 @@ resource "aws_db_instance" "postgres" {
     Project = var.project_name
   }
 }
+
+#############################################
+# GitHub Actions OIDC (no long-lived keys)  #
+#############################################
+
+resource "aws_iam_openid_connect_provider" "github_actions" {
+  url             = "https://token.actions.githubusercontent.com"
+  client_id_list  = ["sts.amazonaws.com"]
+  thumbprint_list = ["6938fd4d98bab03faadb97b34396831e3780aea1"]
+}
+
+# Trust policy: only workflows running on main, in this exact repo, may
+# assume this role -- no other repo or branch can, even with the role ARN.
+resource "aws_iam_role" "github_actions_deploy" {
+  name = "${var.project_name}-github-actions-deploy"
+
+  assume_role_policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [{
+      Effect    = "Allow"
+      Principal = { Federated = aws_iam_openid_connect_provider.github_actions.arn }
+      Action    = "sts:AssumeRoleWithWebIdentity"
+      Condition = {
+        StringEquals = {
+          "token.actions.githubusercontent.com:aud" = "sts.amazonaws.com"
+        }
+        StringLike = {
+          "token.actions.githubusercontent.com:sub" = "repo:kettyvaisbrot/MindedHealth:ref:refs/heads/main"
+        }
+      }
+    }]
+  })
+
+  tags = {
+    Project = var.project_name
+  }
+}
+
+# Just enough to trigger a deploy command on the one app server -- nothing else.
+resource "aws_iam_role_policy" "github_actions_deploy_policy" {
+  name = "${var.project_name}-github-actions-deploy-policy"
+  role = aws_iam_role.github_actions_deploy.id
+
+  policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [
+      {
+        Sid    = "SendDeployCommand"
+        Effect = "Allow"
+        Action = "ssm:SendCommand"
+        Resource = [
+          aws_instance.app.arn,
+          "arn:aws:ssm:${var.aws_region}::document/AWS-RunShellScript"
+        ]
+      },
+      {
+        # SSM's GetCommandInvocation does not support resource-level
+        # restriction, so this is scoped by action only.
+        Sid      = "ReadDeployCommandResult"
+        Effect   = "Allow"
+        Action   = "ssm:GetCommandInvocation"
+        Resource = "*"
+      }
+    ]
+  })
+}

@@ -17,3 +17,8 @@ output "rds_db_name" {
   description = "DB name"
   value       = aws_db_instance.postgres.db_name
 }
+
+output "github_actions_role_arn" {
+  description = "Paste this into the deploy.yml workflow's role-to-assume"
+  value       = aws_iam_role.github_actions_deploy.arn
+}
