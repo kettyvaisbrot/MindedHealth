@@ -110,7 +110,7 @@ def get_history_page(room_name, before_id=None, page_size=HISTORY_PAGE_SIZE):
             "id": row.id,
             "pseudonym": row.pseudonym,
             "message": row.content,
-            "time": row.created_at.strftime("%I:%M:%S %p"),
+            "time": row.created_at.astimezone(CHAT_TIMEZONE).strftime("%I:%M:%S %p"),
         }
         for row in rows
     ]

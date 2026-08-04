@@ -1,14 +1,14 @@
 import json
-import datetime
 import html
 import logging
 import time
 from channels.generic.websocket import AsyncWebsocketConsumer
 from channels.db import database_sync_to_async
 from collections import defaultdict
+from django.utils import timezone as django_timezone
 
 from chat.models import ChatMessage
-from chat.services import get_chat_day, get_history_page, get_or_create_pseudonym, get_room_name_for_user
+from chat.services import CHAT_TIMEZONE, get_chat_day, get_history_page, get_or_create_pseudonym, get_room_name_for_user
 
 logger = logging.getLogger(__name__)
 
@@ -116,7 +116,7 @@ class ChatConsumer(AsyncWebsocketConsumer):
             for badword in PROFANITY_LIST:
                 message = message.replace(badword, "*" * len(badword))
 
-            current_time = datetime.datetime.now().strftime("%I:%M:%S %p")
+            current_time = django_timezone.now().astimezone(CHAT_TIMEZONE).strftime("%I:%M:%S %p")
             logger.info(f"Message in {self.room_name} from {real_user_key}")
 
             await database_sync_to_async(ChatMessage.objects.create)(
