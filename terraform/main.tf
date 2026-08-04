@@ -95,21 +95,20 @@ resource "aws_iam_role_policy_attachment" "app_ssm_policy" {
 }
 
 # Lets the instance read its own secrets (DB password, API keys, etc.) from
-# Parameter Store at deploy time instead of them ever touching source control.
-resource "aws_iam_role_policy" "app_parameter_store_read" {
-  name = "${var.project_name}-app-parameter-store-read"
+# Secrets Manager at deploy time instead of them ever touching source control.
+resource "aws_iam_role_policy" "app_secrets_manager_access" {
+  name = "${var.project_name}-app-secrets-manager-access"
   role = aws_iam_role.app_ssm_role.id
 
   policy = jsonencode({
     Version = "2012-10-17"
     Statement = [{
+      Sid    = "ReadOwnSecrets"
       Effect = "Allow"
       Action = [
-        "ssm:GetParameter",
-        "ssm:GetParameters",
-        "ssm:GetParametersByPath"
+        "secretsmanager:GetSecretValue"
       ]
-      Resource = "arn:aws:ssm:${var.aws_region}:*:parameter/${var.project_name}/*"
+      Resource = "arn:aws:secretsmanager:${var.aws_region}:*:secret:${var.project_name}/*"
     }]
   })
 }
