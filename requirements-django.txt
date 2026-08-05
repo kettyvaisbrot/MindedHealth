@@ -45,7 +45,7 @@ kiwisolver==1.4.9
 kombu==5.4.2
 matplotlib==3.10.5
 multidict==6.2.0
-nltk==3.9.1
+nltk==3.10.0
 numpy==2.3.2
 openai==1.68.2
 packaging==25.0
