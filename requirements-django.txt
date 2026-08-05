@@ -55,7 +55,7 @@ prompt_toolkit==3.0.50
 propcache==0.3.0
 pydantic==2.10.6
 pydantic_core==2.27.2
-Pygments==2.19.2
+Pygments==2.20.0
 pyparsing==3.2.3
 pytest==8.4.1
 pytest-django==4.11.1
