@@ -96,6 +96,7 @@ def serialize_logs(logs):
 
 class AIInsightsAPIView(APIView):
     permission_classes = [IsAuthenticated]
+    throttle_scope = 'ai_insight'
 
     @swagger_auto_schema(
         operation_description="Retrieve AI-generated mental health insights based on user's recent activity logs",

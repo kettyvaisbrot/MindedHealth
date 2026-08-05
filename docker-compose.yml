@@ -14,40 +14,73 @@ services:
   redis:
     image: redis:7
     restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 3s
+      retries: 3
 
   django:
     image: kettyvaisbrot/mindedhealth-django:v8
     restart: unless-stopped
     env_file: .env
     depends_on:
-      - redis
+      redis:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/healthz/')"]
+      interval: 15s
+      timeout: 5s
+      retries: 3
+      start_period: 20s
 
   ai-microservice:
     image: kettyvaisbrot/mindedhealth-ai:v31
     restart: unless-stopped
     env_file: .env
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8001/health')"]
+      interval: 15s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
 
   insights-service:
     image: kettyvaisbrot/mindedhealth-insights:v1
     restart: unless-stopped
     env_file: .env
     depends_on:
-      - redis
+      redis:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8002/health')"]
+      interval: 15s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
 
   celery-worker:
     image: kettyvaisbrot/mindedhealth-django:v8
     restart: unless-stopped
     env_file: .env
     depends_on:
-      - redis
+      redis:
+        condition: service_healthy
     command: celery -A MindedHealth worker --loglevel=info
+    healthcheck:
+      test: ["CMD-SHELL", "celery -A MindedHealth inspect ping -d celery@$$HOSTNAME | grep -q OK"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 30s
 
   celery-beat:
     image: kettyvaisbrot/mindedhealth-django:v8
     restart: unless-stopped
     env_file: .env
     depends_on:
-      - redis
+      redis:
+        condition: service_healthy
     command: celery -A MindedHealth beat --loglevel=info
 
 volumes:

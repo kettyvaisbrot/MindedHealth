@@ -37,6 +37,7 @@ from rest_framework.authtoken.views import obtain_auth_token
 from rest_framework_simplejwt.views import TokenObtainPairView, TokenRefreshView
 from django.contrib.auth.decorators import login_required
 from django.contrib.auth import views as auth_views
+from MindedHealth.health import healthz
 
 
 schema_view = get_schema_view(
@@ -50,6 +51,7 @@ schema_view = get_schema_view(
 )
 
 urlpatterns = [
+    path("healthz/", healthz, name="healthz"),
     path("silk/", include("silk.urls", namespace="silk")),
     path("admin/", admin.site.urls),
     path("dashboard/", include("dashboard.urls", namespace="dashboard")),

@@ -26,6 +26,14 @@ class PromptInput(BaseModel):
     prompt: str
 
 
+@app.get("/health")
+def health():
+    # Deliberately does not call OpenAI -- an upstream OpenAI outage is
+    # already handled by the circuit breaker below and shouldn't make Docker
+    # restart an otherwise-healthy container.
+    return {"status": "ok"}
+
+
 def verify_internal_key(x_internal_key: Optional[str] = Header(None)):
     if not x_internal_key or not hmac.compare_digest(x_internal_key, INTERNAL_API_KEY):
         logger.warning("Unauthorized request to ai_microservice: invalid or missing X-Internal-Key")
