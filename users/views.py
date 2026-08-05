@@ -65,8 +65,18 @@ def family_dashboard(request, family_member_id):
 
     return render(request, 'users/family_dashboard.html', context)
 
+@login_required
 def patient_detail(request, patient_id):
     patient = get_object_or_404(PatientProfile, id=patient_id)
+
+    try:
+        therapist_profile = request.user.therapistprofile
+    except TherapistProfile.DoesNotExist:
+        return redirect('home')
+
+    if patient.therapist != therapist_profile:
+        return redirect('home')
+
     return render(request, 'users/patient_detail.html', {'patient': patient})
 
 
