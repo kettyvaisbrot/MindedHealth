@@ -123,6 +123,16 @@ Messages are removed from live systems after ~24 hours, but
 May exist in backups for a longer, fixed period (e.g., per standard backup policy).
 
 6. Content, Moderation & Abuse Handling
+
+> **Superseded.** §6 and §7 below (and the de-anonymization/audit parts of §9.3) were
+> written before persistence/retention/encryption existed and before the "Safety Admin"
+> approach was reconsidered. The current, developer-approved design — kept purely
+> automated (no human Safety Admin/review queue), chat-only MuteBan, PII scope limited
+> to ID/email/phone, and a real-time clinician alert in place of a safety-admin
+> queue — is in
+> [`feature_chat_moderation_safety.md`](feature_chat_moderation_safety.md). Sections
+> below are kept for history; do not implement against them.
+
 6.1 Allowed & disallowed content (MVP)
 Allowed:
 Text-only messages, including emojis.
