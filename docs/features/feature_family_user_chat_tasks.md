@@ -59,6 +59,16 @@ Acceptance criteria:
 When a user logs out elsewhere, the chat connection is closed within a reasonable interval.
 If a user’s role is changed to one that cannot access the room, the connection drops and future sends are rejected.
 Moderation & PII filtering
+
+> Superseded — the tasks below (moderation, PII, MuteBan, SafetyFlag, AuditLog,
+> Safety Admin) predate the finalized design. See
+> [`feature_chat_moderation_safety.md`](feature_chat_moderation_safety.md) for the
+> current task breakdown (§13, Execution Order) and schema (§7). Key differences: PII
+> scope is ID/email/phone only (no links, no name/address); MuteBan is chat-only, not
+> global; there is no Safety Admin role/AuditLog — a real-time clinician alert replaces
+> the review-queue model; SafetyFlag stores its own encrypted content copy, not a
+> message_id reference.
+
 Task: Implement content filters (abuse, PII, links)
 Implement a filter pipeline for incoming message content:
 Word/phrase lists (Hebrew + English) for abusive content.
