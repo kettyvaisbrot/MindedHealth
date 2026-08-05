@@ -155,12 +155,19 @@ REST_FRAMEWORK = {
     
     # Throttling to prevent abuse
     'DEFAULT_THROTTLE_CLASSES': [
-        'rest_framework.throttling.UserRateThrottle',  
-        'rest_framework.throttling.AnonRateThrottle',  
+        'rest_framework.throttling.UserRateThrottle',
+        'rest_framework.throttling.AnonRateThrottle',
+        'rest_framework.throttling.ScopedRateThrottle',
     ],
     'DEFAULT_THROTTLE_RATES': {
         'user': '1000/day',
-        'anon': '100/day',    
+        'anon': '100/day',
+        # Per-minute cap on AI-insight generation specifically -- the daily
+        # user/anon rates above are too coarse to stop a burst of calls that
+        # each cost real OpenAI spend. ScopedRateThrottle is a no-op for any
+        # view that doesn't set throttle_scope, so this only affects views
+        # that opt in.
+        'ai_insight': '3/min',
     },
 
     # Pagination (avoid large responses)
