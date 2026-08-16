@@ -7,8 +7,8 @@ from channels.db import database_sync_to_async
 from collections import defaultdict
 from django.utils import timezone as django_timezone
 
-from chat.models import ChatMessage, ModerationLog
-from chat.moderation import contains_profanity
+from chat.models import ChatMessage
+from chat.moderation import contains_profanity, is_muted, record_violation
 from chat.services import CHAT_TIMEZONE, get_chat_day, get_history_page, get_or_create_pseudonym, get_room_name_for_user
 
 logger = logging.getLogger(__name__)
@@ -48,6 +48,17 @@ class ChatConsumer(AsyncWebsocketConsumer):
             await self.close(code=4003)  # forbidden
             return
 
+        # Chat-wide mute (MuteBan), independent of room. Accept first so the
+        # client can actually receive the "muted" message before the close.
+        muted_until = await database_sync_to_async(is_muted)(self.scope["user"])
+        if muted_until:
+            await self.accept()
+            await self.send(text_data=json.dumps(
+                {"type": "muted", "muted_until": muted_until.isoformat()}
+            ))
+            await self.close(code=4002)  # muted
+            return
+
         # Auto-generated, day-stable display name -- never the real username.
         self.pseudonym = await database_sync_to_async(get_or_create_pseudonym)(
             self.scope["user"], self.room_name
@@ -79,6 +90,16 @@ class ChatConsumer(AsyncWebsocketConsumer):
         # Internal-only identity, for rate limiting and server logs -- never sent to any client.
         real_user_key = self.scope["user"].username
         now = time.time()
+
+        # Catches the edge case where a user gets muted from another
+        # connection (e.g. a second tab) while this socket is still open.
+        muted_until = await database_sync_to_async(is_muted)(self.scope["user"])
+        if muted_until:
+            await self.send(text_data=json.dumps(
+                {"type": "muted", "muted_until": muted_until.isoformat()}
+            ))
+            await self.close(code=4002)  # muted
+            return
 
         try:
             text_data_json = json.loads(text_data)
@@ -115,11 +136,16 @@ class ChatConsumer(AsyncWebsocketConsumer):
             # broadcast, and don't mask+send (that leaves harassment in the
             # room, just censored).
             if contains_profanity(message):
-                await database_sync_to_async(ModerationLog.objects.create)(
-                    user=self.scope["user"],
-                    room_name=self.room_name,
-                    category="profanity",
+                new_mute_until = await database_sync_to_async(record_violation)(
+                    self.scope["user"], self.room_name, "profanity"
                 )
+                if new_mute_until:
+                    await self.send(text_data=json.dumps(
+                        {"type": "muted", "muted_until": new_mute_until.isoformat()}
+                    ))
+                    await self.close(code=4002)  # muted
+                    return
+
                 await self.send(text_data=json.dumps(
                     {"type": "message_blocked", "reason": "moderation"}
                 ))
