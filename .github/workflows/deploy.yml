@@ -39,7 +39,7 @@ jobs:
           COMMAND_ID=$(aws ssm send-command \
             --instance-ids "i-0ba0940a8a08113ca" \
             --document-name "AWS-RunShellScript" \
-            --parameters "commands=[\"sed -i 's|kettyvaisbrot/mindedhealth-django:.*|kettyvaisbrot/mindedhealth-django:${IMAGE_TAG}|g' /home/ec2-user/app/docker-compose.yml\",\"cd /home/ec2-user/app && sudo docker-compose pull django celery-worker celery-beat\",\"cd /home/ec2-user/app && sudo docker-compose up -d\"]" \
+            --parameters "commands=[\"set -e; sed -i 's|kettyvaisbrot/mindedhealth-django:.*|kettyvaisbrot/mindedhealth-django:${IMAGE_TAG}|g' /home/ec2-user/app/docker-compose.yml && cd /home/ec2-user/app && sudo docker-compose pull django celery-worker celery-beat && sudo docker-compose run --rm django python manage.py migrate --noinput && sudo docker-compose up -d\"]" \
             --query "Command.CommandId" --output text)
 
           for i in $(seq 1 20); do
