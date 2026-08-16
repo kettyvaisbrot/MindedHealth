@@ -4,7 +4,11 @@ from channels.db import database_sync_to_async
 from channels.testing import WebsocketCommunicator
 from django.contrib.auth import get_user_model
 
-from chat.models import ModerationLog
+from datetime import timedelta
+
+from django.utils import timezone
+
+from chat.models import ModerationLog, MuteBan
 from MindedHealth.consumers import ChatConsumer
 
 User = get_user_model()
@@ -130,6 +134,79 @@ def test_clean_message_still_broadcasts_normally(db, settings):
 
         log_count = await database_sync_to_async(ModerationLog.objects.count)()
         assert log_count == 0
+
+        await communicator.disconnect()
+
+    async_to_sync(scenario)()
+
+
+@pytest.mark.django_db(transaction=True)
+def test_third_violation_closes_socket_with_4002_and_sends_muted(db, settings):
+    settings.CHANNEL_LAYERS = {"default": {"BACKEND": "channels.layers.InMemoryChannelLayer"}}
+    settings.CHAT_PROFANITY_WORDS = ["חרא"]
+    muted_test_user = User.objects.create_user(
+        username="third_violation_test_user", password="pass12345", role="patient"
+    )
+
+    async def scenario():
+        communicator = WebsocketCommunicator(ChatConsumer.as_asgi(), "/ws/chat/patient/")
+        communicator.scope["user"] = muted_test_user
+        communicator.scope["url_route"] = {"kwargs": {"room_name": "patient"}}
+
+        connected, _ = await communicator.connect()
+        assert connected
+
+        await communicator.receive_json_from()  # your_pseudonym
+        await communicator.receive_json_from()  # history
+        await communicator.receive_json_from()  # user_list_update
+
+        # Send 3 profane messages. Reset the rate-limit clock between sends
+        # (it's a class-level dict keyed by username, unrelated to what
+        # we're testing here -- otherwise these would collide as "too fast").
+        for i in range(2):
+            ChatConsumer.user_last_message_time[muted_test_user.username] = 0
+            await communicator.send_json_to({"message": "אתה חרא"})
+            response = await communicator.receive_json_from()
+            assert response == {"type": "message_blocked", "reason": "moderation"}
+
+        ChatConsumer.user_last_message_time[muted_test_user.username] = 0
+        await communicator.send_json_to({"message": "אתה חרא"})
+        muted_response = await communicator.receive_json_from()
+        assert muted_response["type"] == "muted"
+        assert "muted_until" in muted_response
+
+        closed = await communicator.receive_output()
+        assert closed["type"] == "websocket.close"
+        assert closed.get("code") == 4002
+
+        await communicator.disconnect()
+
+    async_to_sync(scenario)()
+
+
+@pytest.mark.django_db(transaction=True)
+def test_already_muted_user_is_rejected_on_connect(db, settings):
+    settings.CHANNEL_LAYERS = {"default": {"BACKEND": "channels.layers.InMemoryChannelLayer"}}
+    muted_user = User.objects.create_user(
+        username="already_muted_test_user", password="pass12345", role="patient"
+    )
+    MuteBan.objects.create(user=muted_user, muted_until=timezone.now() + timedelta(hours=1))
+
+    async def scenario():
+        communicator = WebsocketCommunicator(ChatConsumer.as_asgi(), "/ws/chat/patient/")
+        communicator.scope["user"] = muted_user
+        communicator.scope["url_route"] = {"kwargs": {"room_name": "patient"}}
+
+        connected, _ = await communicator.connect()
+        assert connected  # accept() is called so the "muted" message can be sent
+
+        muted_response = await communicator.receive_json_from()
+        assert muted_response["type"] == "muted"
+        assert "muted_until" in muted_response
+
+        closed = await communicator.receive_output()
+        assert closed["type"] == "websocket.close"
+        assert closed.get("code") == 4002
 
         await communicator.disconnect()
 

@@ -80,3 +80,16 @@ class ModerationLog(models.Model):
 
     def __str__(self):
         return f"{self.category} in {self.room_name} @ {self.created_at}"
+
+
+class MuteBan(models.Model):
+    """One row per user who has ever been muted from chat. Self-expiring --
+    if muted_until is null or in the past, the user is not currently muted.
+    No cleanup task needed."""
+
+    user = models.OneToOneField(settings.AUTH_USER_MODEL, on_delete=models.CASCADE)
+    muted_until = models.DateTimeField(null=True, blank=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    def __str__(self):
+        return f"{self.user} muted until {self.muted_until}"
