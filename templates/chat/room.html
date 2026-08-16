@@ -71,6 +71,12 @@
         .user-list div:hover {
             background-color: #f0f0f0;
         }
+        #chat-error {
+            display: none;
+            color: #c00;
+            font-size: 14px;
+            margin-top: 6px;
+        }
     </style>
 </head>
 <body>
@@ -81,6 +87,7 @@
 
         <textarea id="chat-log" readonly style="height: 300px;"></textarea>
         <input type="text" id="chat-message-input" placeholder="Type a message...">
+        <div id="chat-error"></div>
 
         <div id="user-list" class="user-list"></div>
     </div>
@@ -90,9 +97,30 @@
         let oldestMessageId = null;
         let hasMoreHistory = false;
         let isLoadingHistory = false;
+        let lastSentMessage = '';
+        let pendingMuteUntil = null;
+        let errorTimeoutId = null;
+
+        const BLOCKED_REASON_MESSAGES = {
+            moderation: 'ההודעה נחסמה: תוכן לא הולם.',
+            pii: 'ההודעה נחסמה: נא להימנע משיתוף פרטים מזהים (טלפון/מייל/ת.ז.).',
+        };
 
         function formatMessage(pseudonym, message, time) {
             return `[${time}] ${pseudonym}: ${message}\n`;
+        }
+
+        function showChatError(text) {
+            const errorDiv = document.querySelector('#chat-error');
+            errorDiv.textContent = text;
+            errorDiv.style.display = 'block';
+
+            if (errorTimeoutId) {
+                clearTimeout(errorTimeoutId);
+            }
+            errorTimeoutId = setTimeout(function() {
+                errorDiv.style.display = 'none';
+            }, 5000);
         }
 
         document.addEventListener('DOMContentLoaded', function () {
@@ -125,6 +153,16 @@
                     }
                     hasMoreHistory = data.has_more;
                     isLoadingHistory = false;
+                } else if (data.type === 'message_blocked') {
+                    // Restore what was typed -- the input was optimistically
+                    // cleared on send, but a blocked message shouldn't just
+                    // vanish silently.
+                    document.querySelector('#chat-message-input').value = lastSentMessage;
+                    showChatError(BLOCKED_REASON_MESSAGES[data.reason] || 'ההודעה נחסמה.');
+                } else if (data.type === 'muted') {
+                    // The close event (below) fires right after this -- store
+                    // the time so onclose can show it before redirecting.
+                    pendingMuteUntil = data.muted_until;
                 } else if (data.users) {
                     userList = data.users;
                     console.log('User list:', userList);
@@ -138,6 +176,11 @@
                 if (event.code === 4000) {
                     // The chat day ended -- silently return home; re-entering the room
                     // gets a fresh pseudonym for the new day automatically.
+                    window.location.href = '/';
+                } else if (event.code === 4002) {
+                    // Muted -- unlike the day-boundary case, show why before leaving.
+                    const until = pendingMuteUntil ? new Date(pendingMuteUntil).toLocaleString() : '';
+                    alert('השימוש בצ\'אט הוגבל זמנית עקב הפרות חוזרות' + (until ? ' עד ' + until : '') + '.');
                     window.location.href = '/';
                 }
             };
@@ -161,6 +204,7 @@
                 }
 
                 if (e.key === 'Enter' && message.trim()) {
+                    lastSentMessage = message;
                     chatSocket.send(JSON.stringify({
                         'message': message
                     }));
