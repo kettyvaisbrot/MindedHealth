@@ -7,13 +7,12 @@ from channels.db import database_sync_to_async
 from collections import defaultdict
 from django.utils import timezone as django_timezone
 
-from chat.models import ChatMessage
+from chat.models import ChatMessage, ModerationLog
+from chat.moderation import contains_profanity
 from chat.services import CHAT_TIMEZONE, get_chat_day, get_history_page, get_or_create_pseudonym, get_room_name_for_user
 
 logger = logging.getLogger(__name__)
 
-# Optional: simple profanity filter
-PROFANITY_LIST = ["badword1", "badword2"]  # extend as needed
 MAX_MESSAGE_LENGTH = 500  # characters
 RATE_LIMIT_SECONDS = 1  # 1 message per second per user
 
@@ -112,9 +111,19 @@ class ChatConsumer(AsyncWebsocketConsumer):
             if len(message) > MAX_MESSAGE_LENGTH:
                 message = message[:MAX_MESSAGE_LENGTH]
 
-            # Optional profanity filter
-            for badword in PROFANITY_LIST:
-                message = message.replace(badword, "*" * len(badword))
+            # Profanity/harassment moderation -- block, don't persist or
+            # broadcast, and don't mask+send (that leaves harassment in the
+            # room, just censored).
+            if contains_profanity(message):
+                await database_sync_to_async(ModerationLog.objects.create)(
+                    user=self.scope["user"],
+                    room_name=self.room_name,
+                    category="profanity",
+                )
+                await self.send(text_data=json.dumps(
+                    {"type": "message_blocked", "reason": "moderation"}
+                ))
+                return
 
             current_time = django_timezone.now().astimezone(CHAT_TIMEZONE).strftime("%I:%M:%S %p")
             logger.info(f"Message in {self.room_name} from {real_user_key}")
