@@ -13,16 +13,6 @@
         </a>
     </p>
 
-    {% if patient.family_member %}
-        <p>
-            <a href="{% url 'family_dashboard' patient.family_member.id %}">
-                <button>Family Member</button>
-            </a>
-        </p>
-    {% else %}
-        <p>No family member assigned yet.</p>
-    {% endif %}
-
     <p><a href="{% url 'therapist_dashboard' %}">← Back to Dashboard</a></p>
 </body>
 </html>
