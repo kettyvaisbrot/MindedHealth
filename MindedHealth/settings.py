@@ -91,6 +91,13 @@ OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
 # EMAIL_HOST_PASSWORD -- never committed to git.
 CHAT_MESSAGE_ENCRYPTION_KEY = os.getenv("CHAT_MESSAGE_ENCRYPTION_KEY", "")
 
+# Comma-separated blocked-word list for chat/moderation.py. Deliberately not
+# committed to git (this is a public repo) -- set in .env locally and as a
+# real env var / secret in production.
+CHAT_PROFANITY_WORDS = [
+    w.strip() for w in os.getenv("CHAT_PROFANITY_WORDS", "").split(",") if w.strip()
+]
+
 # =======================
 # APPLICATION DEFINITION
 # =======================

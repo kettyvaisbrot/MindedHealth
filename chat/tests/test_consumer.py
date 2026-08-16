@@ -1,8 +1,10 @@
 import pytest
 from asgiref.sync import async_to_sync
+from channels.db import database_sync_to_async
 from channels.testing import WebsocketCommunicator
 from django.contrib.auth import get_user_model
 
+from chat.models import ModerationLog
 from MindedHealth.consumers import ChatConsumer
 
 User = get_user_model()
@@ -58,6 +60,76 @@ def test_consumer_never_sends_the_real_username_over_the_wire(user, settings):
         assert broadcast["user"] == my_pseudonym
         assert broadcast["user"] != user.username
         assert user.username not in broadcast["user"]
+
+        await communicator.disconnect()
+
+    async_to_sync(scenario)()
+
+
+@pytest.mark.django_db(transaction=True)
+def test_profane_message_is_blocked_not_broadcast_and_logged(db, settings):
+    settings.CHANNEL_LAYERS = {"default": {"BACKEND": "channels.layers.InMemoryChannelLayer"}}
+    settings.CHAT_PROFANITY_WORDS = ["חרא"]
+    # Dedicated username: ChatConsumer.user_last_message_time is a class-level
+    # dict shared across tests, so reusing "alice" here can spuriously trip
+    # the 1-msg/sec rate limit if another test just sent a message for her.
+    moderation_user = User.objects.create_user(
+        username="moderation_test_user", password="pass12345", role="patient"
+    )
+
+    async def scenario():
+        communicator = WebsocketCommunicator(ChatConsumer.as_asgi(), "/ws/chat/patient/")
+        communicator.scope["user"] = moderation_user
+        communicator.scope["url_route"] = {"kwargs": {"room_name": "patient"}}
+
+        connected, _ = await communicator.connect()
+        assert connected
+
+        await communicator.receive_json_from()  # your_pseudonym
+        await communicator.receive_json_from()  # history
+        await communicator.receive_json_from()  # user_list_update
+
+        await communicator.send_json_to({"message": "אתה חרא"})
+        response = await communicator.receive_json_from()
+
+        assert response == {"type": "message_blocked", "reason": "moderation"}
+        assert await communicator.receive_nothing() is True
+
+        log_count = await database_sync_to_async(ModerationLog.objects.count)()
+        assert log_count == 1
+
+        await communicator.disconnect()
+
+    async_to_sync(scenario)()
+
+
+@pytest.mark.django_db(transaction=True)
+def test_clean_message_still_broadcasts_normally(db, settings):
+    settings.CHANNEL_LAYERS = {"default": {"BACKEND": "channels.layers.InMemoryChannelLayer"}}
+    settings.CHAT_PROFANITY_WORDS = ["חרא"]
+    clean_user = User.objects.create_user(
+        username="clean_message_test_user", password="pass12345", role="patient"
+    )
+
+    async def scenario():
+        communicator = WebsocketCommunicator(ChatConsumer.as_asgi(), "/ws/chat/patient/")
+        communicator.scope["user"] = clean_user
+        communicator.scope["url_route"] = {"kwargs": {"room_name": "patient"}}
+
+        connected, _ = await communicator.connect()
+        assert connected
+
+        await communicator.receive_json_from()  # your_pseudonym
+        await communicator.receive_json_from()  # history
+        await communicator.receive_json_from()  # user_list_update
+
+        await communicator.send_json_to({"message": "hello, how are you?"})
+        broadcast = await communicator.receive_json_from()
+
+        assert broadcast["message"] == "hello, how are you?"
+
+        log_count = await database_sync_to_async(ModerationLog.objects.count)()
+        assert log_count == 0
 
         await communicator.disconnect()
 

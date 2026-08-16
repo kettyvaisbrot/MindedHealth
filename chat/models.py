@@ -55,3 +55,28 @@ class PseudonymAssignment(models.Model):
 
     def __str__(self):
         return f"{self.pseudonym} ({self.room_name}, {self.chat_day})"
+
+
+class ModerationLog(models.Model):
+    """Metadata-only audit trail for blocked messages -- never stores message
+    content. Powers the MuteBan violation counter (chat/models.py, later)."""
+
+    CATEGORY_CHOICES = [
+        ("profanity", "Profanity"),
+        ("pii", "PII"),
+    ]
+
+    user = models.ForeignKey(
+        settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True
+    )
+    room_name = models.CharField(max_length=100)
+    category = models.CharField(max_length=20, choices=CATEGORY_CHOICES)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        indexes = [
+            models.Index(fields=["user", "created_at"]),
+        ]
+
+    def __str__(self):
+        return f"{self.category} in {self.room_name} @ {self.created_at}"
