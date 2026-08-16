@@ -11,7 +11,7 @@ client = TestClient(app)
 # _authenticate is bypassed so each test exercises only what it intends to test.
 @pytest.fixture(autouse=True)
 def _bypass_auth(monkeypatch):
-    monkeypatch.setattr("app.api.insights._authenticate", lambda auth: None)
+    monkeypatch.setattr("app.api.insights._authenticate", lambda auth: "test-internal-token")
 
 
 SAMPLE_LOGS = {
@@ -132,7 +132,7 @@ def test_prompt_does_not_contain_none_for_adherence(mock_ai, mock_redis):
     mock_redis.get.return_value = None
     captured = {}
 
-    def capture(prompt):
+    def capture(prompt, internal_token=None):
         captured["prompt"] = prompt
         return "ok"
 
@@ -151,7 +151,7 @@ def test_prompt_does_not_contain_none_for_meeting_positivity(mock_ai, mock_redis
     mock_redis.get.return_value = None
     captured = {}
 
-    def capture(prompt):
+    def capture(prompt, internal_token=None):
         captured["prompt"] = prompt
         return "ok"
 

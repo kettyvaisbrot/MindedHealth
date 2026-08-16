@@ -1,8 +1,10 @@
 """
-Tests for Internal Service JWT authentication (PR #9).
+Tests for Internal Service JWT authentication on ai_microservice.
 
-The endpoint requires Authorization: Bearer <internal-service-JWT>.
-No other authentication mechanism is accepted.
+The endpoint requires Authorization: Bearer <internal-service-JWT>. This token
+is forwarded unchanged by insights_service -- ai_microservice never receives
+a token it wasn't handed by an upstream caller, and it never issues its own.
+No other authentication mechanism (e.g. X-Internal-Key) is accepted.
 
 Matrix:
   ✓ Valid Internal JWT             → 200
@@ -16,19 +18,18 @@ import uuid
 import pytest
 import jwt
 from datetime import datetime, timezone, timedelta
-from unittest.mock import patch
+from unittest.mock import patch, MagicMock
 
 from cryptography.hazmat.primitives.asymmetric import rsa
 from cryptography.hazmat.backends import default_backend
 from cryptography.hazmat.primitives import serialization
 from fastapi.testclient import TestClient
 
-from app.main import app
+from main import app
 
 client = TestClient(app)
 
-# Minimal valid log payload — content does not matter for auth tests.
-_PAYLOAD = {"user_id": 1, "logs": {k: [] for k in ["food", "sport", "sleep", "meetings", "medications", "felt_off"]}}
+_PAYLOAD = {"prompt": "How was my week?"}
 
 
 # ── RSA key helpers ───────────────────────────────────────────────────────────
@@ -62,7 +63,7 @@ def other_key_pair():
 def _make_token(
     private_pem: str,
     *,
-    audience: str = "insights-service",
+    audience: str = "ai-service",
     issuer: str = "django-api",
     token_type: str = "internal_service",
     lifetime_seconds: int = 60,
@@ -87,21 +88,28 @@ def _make_token(
 
 def _jwt_patches(public_pem: str, issuer: str = "django-api"):
     return patch.multiple(
-        "app.auth.internal_jwt",
+        "internal_jwt",
         INTERNAL_JWT_PUBLIC_KEY=public_pem,
         INTERNAL_JWT_ISSUER=issuer,
     )
 
 
-# ── autouse: mock business logic so auth tests don't hit redis / OpenAI ──────
+# ── autouse: mock the OpenAI call so auth tests don't hit the network ────────
 
 @pytest.fixture(autouse=True)
 def _mock_business_logic():
-    with patch("app.services.insights_engine.redis_client") as mock_redis, \
-         patch("app.services.insights_engine.get_ai_insight") as mock_ai:
-        mock_redis.get.return_value = None
-        mock_ai.return_value = "test insight"
+    fake_response = MagicMock()
+    fake_response.choices[0].message.content = "test insight"
+    with patch("main.call_openai_with_retry", return_value=fake_response):
         yield
+
+
+@pytest.fixture(autouse=True)
+def _reset_failure_count():
+    import main
+    main.failure_count = 0
+    yield
+    main.failure_count = 0
 
 
 # ── auth matrix ───────────────────────────────────────────────────────────────
@@ -111,7 +119,7 @@ def test_valid_internal_jwt_returns_200(key_pair):
     token = _make_token(private_pem)
     with _jwt_patches(public_pem):
         resp = client.post(
-            "/api/v1/insights",
+            "/generate-insight",
             json=_PAYLOAD,
             headers={"Authorization": f"Bearer {token}"},
         )
@@ -124,7 +132,7 @@ def test_invalid_jwt_wrong_key_returns_401(key_pair, other_key_pair):
     token = _make_token(private_pem)
     with _jwt_patches(wrong_public_pem):
         resp = client.post(
-            "/api/v1/insights",
+            "/generate-insight",
             json=_PAYLOAD,
             headers={"Authorization": f"Bearer {token}"},
         )
@@ -136,7 +144,7 @@ def test_expired_jwt_returns_401(key_pair):
     token = _make_token(private_pem, lifetime_seconds=-1)
     with _jwt_patches(public_pem):
         resp = client.post(
-            "/api/v1/insights",
+            "/generate-insight",
             json=_PAYLOAD,
             headers={"Authorization": f"Bearer {token}"},
         )
@@ -145,10 +153,10 @@ def test_expired_jwt_returns_401(key_pair):
 
 def test_wrong_audience_returns_401(key_pair):
     private_pem, public_pem = key_pair
-    token = _make_token(private_pem, audience="ai-service")
+    token = _make_token(private_pem, audience="insights-service")
     with _jwt_patches(public_pem):
         resp = client.post(
-            "/api/v1/insights",
+            "/generate-insight",
             json=_PAYLOAD,
             headers={"Authorization": f"Bearer {token}"},
         )
@@ -160,7 +168,7 @@ def test_wrong_issuer_returns_401(key_pair):
     token = _make_token(private_pem, issuer="rogue-service")
     with _jwt_patches(public_pem, issuer="django-api"):
         resp = client.post(
-            "/api/v1/insights",
+            "/generate-insight",
             json=_PAYLOAD,
             headers={"Authorization": f"Bearer {token}"},
         )
@@ -168,19 +176,28 @@ def test_wrong_issuer_returns_401(key_pair):
 
 
 def test_missing_authentication_returns_401():
-    resp = client.post("/api/v1/insights", json=_PAYLOAD)
+    resp = client.post("/generate-insight", json=_PAYLOAD)
     assert resp.status_code == 401
 
 
 def test_multi_audience_token_is_accepted(key_pair):
     """The token Django issues is scoped to both hops (insights-service AND
-    ai-service) so insights_service can forward it unchanged to ai_microservice."""
+    ai-service); ai_microservice must accept it via the same forwarded token."""
     private_pem, public_pem = key_pair
     token = _make_token(private_pem, audience=["insights-service", "ai-service"])
     with _jwt_patches(public_pem):
         resp = client.post(
-            "/api/v1/insights",
+            "/generate-insight",
             json=_PAYLOAD,
             headers={"Authorization": f"Bearer {token}"},
         )
     assert resp.status_code == 200
+
+
+def test_x_internal_key_alone_is_no_longer_accepted():
+    resp = client.post(
+        "/generate-insight",
+        json=_PAYLOAD,
+        headers={"X-Internal-Key": "whatever-the-old-shared-secret-was"},
+    )
+    assert resp.status_code == 401

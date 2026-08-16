@@ -10,7 +10,7 @@ from app.services.ai_client import get_ai_insight
 CACHE_TTL_SECONDS = 60 * 60 * 24  # 24 hours
 
 
-def generate_insights(user_id: int, logs: dict) -> str:
+def generate_insights(user_id: int, logs: dict, internal_token: str) -> str:
     today_str = str(date.today())
     cache_key = f"insights:{user_id}:{today_str}"
 
@@ -42,7 +42,7 @@ def generate_insights(user_id: int, logs: dict) -> str:
         correlations=correlations,
     )
 
-    insight_text = get_ai_insight(prompt)
+    insight_text = get_ai_insight(prompt, internal_token)
 
     # Save to Redis
     redis_client.set(
