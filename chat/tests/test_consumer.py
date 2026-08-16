@@ -141,6 +141,39 @@ def test_clean_message_still_broadcasts_normally(db, settings):
 
 
 @pytest.mark.django_db(transaction=True)
+def test_message_with_pii_is_blocked_not_broadcast_and_logged(db, settings):
+    settings.CHANNEL_LAYERS = {"default": {"BACKEND": "channels.layers.InMemoryChannelLayer"}}
+    pii_test_user = User.objects.create_user(
+        username="pii_test_user", password="pass12345", role="patient"
+    )
+
+    async def scenario():
+        communicator = WebsocketCommunicator(ChatConsumer.as_asgi(), "/ws/chat/patient/")
+        communicator.scope["user"] = pii_test_user
+        communicator.scope["url_route"] = {"kwargs": {"room_name": "patient"}}
+
+        connected, _ = await communicator.connect()
+        assert connected
+
+        await communicator.receive_json_from()  # your_pseudonym
+        await communicator.receive_json_from()  # history
+        await communicator.receive_json_from()  # user_list_update
+
+        await communicator.send_json_to({"message": "אפשר לכתוב לי למייל dana.cohen@example.com"})
+        response = await communicator.receive_json_from()
+
+        assert response == {"type": "message_blocked", "reason": "pii"}
+        assert await communicator.receive_nothing() is True
+
+        log = await database_sync_to_async(ModerationLog.objects.get)()
+        assert log.category == "pii"
+
+        await communicator.disconnect()
+
+    async_to_sync(scenario)()
+
+
+@pytest.mark.django_db(transaction=True)
 def test_third_violation_closes_socket_with_4002_and_sends_muted(db, settings):
     settings.CHANNEL_LAYERS = {"default": {"BACKEND": "channels.layers.InMemoryChannelLayer"}}
     settings.CHAT_PROFANITY_WORDS = ["חרא"]

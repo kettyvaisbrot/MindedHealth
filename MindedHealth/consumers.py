@@ -8,7 +8,7 @@ from collections import defaultdict
 from django.utils import timezone as django_timezone
 
 from chat.models import ChatMessage
-from chat.moderation import contains_profanity, is_muted, record_violation
+from chat.moderation import contains_pii, contains_profanity, is_muted, record_violation
 from chat.services import CHAT_TIMEZONE, get_chat_day, get_history_page, get_or_create_pseudonym, get_room_name_for_user
 
 logger = logging.getLogger(__name__)
@@ -86,6 +86,24 @@ class ChatConsumer(AsyncWebsocketConsumer):
         await self.send_user_list()
         await self.channel_layer.group_discard(self.room_group_name, self.channel_name)
 
+    async def _log_violation_and_block(self, category, reason):
+        """Logs a ModerationLog violation for `category`. Mutes (close 4002)
+        if this was the 3rd violation in the trailing 24h, otherwise sends
+        message_blocked with `reason` so the client knows why."""
+        new_mute_until = await database_sync_to_async(record_violation)(
+            self.scope["user"], self.room_name, category
+        )
+        if new_mute_until:
+            await self.send(text_data=json.dumps(
+                {"type": "muted", "muted_until": new_mute_until.isoformat()}
+            ))
+            await self.close(code=4002)  # muted
+            return
+
+        await self.send(text_data=json.dumps(
+            {"type": "message_blocked", "reason": reason}
+        ))
+
     async def receive(self, text_data):
         # Internal-only identity, for rate limiting and server logs -- never sent to any client.
         real_user_key = self.scope["user"].username
@@ -136,19 +154,14 @@ class ChatConsumer(AsyncWebsocketConsumer):
             # broadcast, and don't mask+send (that leaves harassment in the
             # room, just censored).
             if contains_profanity(message):
-                new_mute_until = await database_sync_to_async(record_violation)(
-                    self.scope["user"], self.room_name, "profanity"
-                )
-                if new_mute_until:
-                    await self.send(text_data=json.dumps(
-                        {"type": "muted", "muted_until": new_mute_until.isoformat()}
-                    ))
-                    await self.close(code=4002)  # muted
-                    return
+                await self._log_violation_and_block("profanity", "moderation")
+                return
 
-                await self.send(text_data=json.dumps(
-                    {"type": "message_blocked", "reason": "moderation"}
-                ))
+            # PII moderation -- ID number (checksum-validated), email, phone
+            # only. Free-text names/addresses are a documented limitation,
+            # not a bug (Decision 9).
+            if contains_pii(message):
+                await self._log_violation_and_block("pii", "pii")
                 return
 
             current_time = django_timezone.now().astimezone(CHAT_TIMEZONE).strftime("%I:%M:%S %p")

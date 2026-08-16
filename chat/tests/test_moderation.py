@@ -5,7 +5,7 @@ from django.contrib.auth import get_user_model
 from django.utils import timezone
 
 from chat.models import MuteBan
-from chat.moderation import contains_profanity, is_muted, record_violation
+from chat.moderation import contains_pii, contains_profanity, is_muted, record_violation
 
 User = get_user_model()
 
@@ -90,3 +90,35 @@ def test_violations_outside_24h_window_do_not_count(moderated_user):
     # Only 2 violations inside the 24h window (the 25h-old one doesn't count) -- not muted yet.
     assert muted_until is None
     assert is_muted(moderated_user) is None
+
+
+# Valid Israeli ID per the official check-digit algorithm (verified by hand):
+# digits 1,2,3,4,5,6,7,8 -> check digit 2.
+VALID_ISRAELI_ID = "123456782"
+INVALID_ISRAELI_ID = "123456789"  # same digits, wrong/no valid check digit
+
+
+def test_detects_valid_israeli_id():
+    assert contains_pii(f"תעודת הזהות שלי היא {VALID_ISRAELI_ID}") is True
+
+
+def test_does_not_flag_nine_digits_with_invalid_checksum():
+    # Not every 9-digit number is an ID -- could be a phone fragment, an
+    # order number, etc. Only checksum-valid IDs should be flagged.
+    assert contains_pii(f"המספר הוא {INVALID_ISRAELI_ID}") is False
+
+
+def test_detects_email():
+    assert contains_pii("אפשר לכתוב לי למייל dana.cohen@example.com") is True
+
+
+def test_detects_israeli_mobile_phone():
+    assert contains_pii("תתקשרו אליי ל-052-1234567") is True
+
+
+def test_detects_israeli_phone_with_country_code():
+    assert contains_pii("call me at +972-52-1234567") is True
+
+
+def test_clean_message_has_no_pii():
+    assert contains_pii("היי, מה שלומך היום?") is False
