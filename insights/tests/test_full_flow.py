@@ -194,7 +194,7 @@ def test_prompt_contains_activity_data_from_db(
     mock_redis.get.return_value = None
     captured = {}
 
-    def capture(prompt):
+    def capture(prompt, internal_token=None):
         captured["prompt"] = prompt
         return "ok"
 
@@ -229,7 +229,7 @@ def test_medication_adherence_is_50_percent(
     mock_redis.get.return_value = None
     captured = {}
 
-    def capture(prompt):
+    def capture(prompt, internal_token=None):
         captured["prompt"] = prompt
         return "ok"
 
@@ -257,7 +257,7 @@ def test_prompt_has_no_none_placeholders(
     mock_redis.get.return_value = None
     captured = {}
 
-    def capture(prompt):
+    def capture(prompt, internal_token=None):
         captured["prompt"] = prompt
         return "ok"
 

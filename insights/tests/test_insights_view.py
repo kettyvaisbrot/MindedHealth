@@ -232,5 +232,5 @@ def test_token_issued_with_correct_arguments(mock_fetch, mock_post, auth_client,
     mock_token_issuer.assert_called_once_with(
         user_id=user.id,
         user_role=user.role,
-        audience="insights-service",
+        audience=["insights-service", "ai-service"],
     )

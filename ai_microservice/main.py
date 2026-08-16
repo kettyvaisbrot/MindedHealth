@@ -1,4 +1,3 @@
-import hmac
 import os
 import logging
 import time
@@ -7,6 +6,9 @@ from fastapi import FastAPI, HTTPException, Header
 from pydantic import BaseModel
 from openai import OpenAI
 from dotenv import load_dotenv
+import jwt
+
+from internal_jwt import validate_internal_jwt
 
 load_dotenv(dotenv_path=os.path.join(os.path.dirname(__file__), "..", ".env"))
 
@@ -15,8 +17,6 @@ logger = logging.getLogger(__name__)
 client = OpenAI()
 
 app = FastAPI()
-
-INTERNAL_API_KEY = os.getenv("INTERNAL_API_KEY", "")
 
 failure_count = 0
 FAILURE_THRESHOLD = 5
@@ -34,15 +34,20 @@ def health():
     return {"status": "ok"}
 
 
-def verify_internal_key(x_internal_key: Optional[str] = Header(None)):
-    if not x_internal_key or not hmac.compare_digest(x_internal_key, INTERNAL_API_KEY):
-        logger.warning("Unauthorized request to ai_microservice: invalid or missing X-Internal-Key")
+def verify_internal_jwt_header(authorization: Optional[str] = Header(None)):
+    if not authorization or not authorization.startswith("Bearer "):
+        raise HTTPException(status_code=401, detail="Unauthorized")
+    token = authorization[len("Bearer "):]
+    try:
+        validate_internal_jwt(token)
+    except jwt.exceptions.PyJWTError as exc:
+        logger.warning("Invalid internal JWT: %s", exc)
         raise HTTPException(status_code=401, detail="Unauthorized")
 
 
 @app.post("/generate-insight")
-def generate_insight(data: PromptInput, x_internal_key: Optional[str] = Header(None)):
-    verify_internal_key(x_internal_key)
+def generate_insight(data: PromptInput, authorization: Optional[str] = Header(None)):
+    verify_internal_jwt_header(authorization)
 
     global failure_count
 

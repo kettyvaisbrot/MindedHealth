@@ -125,12 +125,13 @@ class AIInsightsAPIView(APIView):
         serialized_logs = serialize_logs(logs)
 
         # 3) Call insights_service (it handles Redis caching + metrics + prompt + AI)
-        # Issue a short-lived internal service JWT scoped to insights-service.
-        # This replaces the former X-Internal-Key shared secret.
+        # Issue a short-lived internal service JWT scoped to both downstream hops.
+        # insights_service forwards this same token to ai_microservice — only
+        # Django holds the private key, so nothing downstream can mint its own.
         internal_token = generate_internal_service_token(
             user_id=user.id,
             user_role=user.role,
-            audience="insights-service",
+            audience=["insights-service", "ai-service"],
         )
 
         try:

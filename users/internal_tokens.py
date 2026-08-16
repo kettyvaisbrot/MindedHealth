@@ -18,20 +18,28 @@ or verify user-facing JWTs.
 """
 import uuid
 from datetime import datetime, timezone, timedelta
+from typing import List, Union
 
 import jwt
 from django.conf import settings
 
 
-def generate_internal_service_token(user_id: int, user_role: str, audience: str) -> str:
+def generate_internal_service_token(
+    user_id: int, user_role: str, audience: Union[str, List[str]]
+) -> str:
     """
-    Return a signed RS256 JWT for a single Django → downstream service call.
+    Return a signed RS256 JWT for a Django-initiated downstream service call chain.
 
     Args:
         user_id:   The authenticated user's primary key (stored as str per JWT spec).
         user_role: The user's role string (e.g. 'therapist', 'patient').
-        audience:  The target service name (e.g. 'insights-service', 'ai-service').
-                   Downstream services must validate that aud matches their own name.
+        audience:  The target service name (e.g. 'insights-service'), or a list of
+                    names when the token must be forwarded across multiple hops
+                    (e.g. ['insights-service', 'ai-service']). Only Django can issue
+                    tokens, so a service that calls another service downstream of it
+                    forwards this same token rather than minting its own. Each
+                    downstream service validates that its own name appears in aud,
+                    not that aud equals a single expected string.
 
     The token is signed with settings.INTERNAL_JWT_PRIVATE_KEY (RS256).
     Verification requires settings.INTERNAL_JWT_PUBLIC_KEY — not the user JWT key.
