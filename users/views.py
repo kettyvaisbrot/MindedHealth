@@ -11,6 +11,7 @@ from django_ratelimit.decorators import ratelimit
 from django.contrib.auth import get_user_model
 from users.forms import CustomUserCreationForm, CustomAuthenticationForm
 from chat.services import get_room_name_for_user
+from therapist_portal.models import PatientAlert
 User = get_user_model()
 
 @login_required
@@ -21,7 +22,14 @@ def therapist_dashboard(request):
     except TherapistProfile.DoesNotExist:
         return redirect('home')
 
-    assigned_patients = therapist_profile.patients.all()
+    assigned_patients = list(therapist_profile.patients.select_related('user').all())
+    alerted_user_ids = set(
+        PatientAlert.objects.filter(
+            user_id__in=[p.user_id for p in assigned_patients], resolved=False
+        ).values_list('user_id', flat=True)
+    )
+    for patient in assigned_patients:
+        patient.has_alert = patient.user_id in alerted_user_ids
 
     search_result = None
     error_message = None
