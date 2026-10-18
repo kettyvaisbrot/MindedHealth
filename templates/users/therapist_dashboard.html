@@ -16,6 +16,15 @@
                     <a href="{% url 'patient_detail' patient.id %}">
                         {{ patient.user.username }}
                     </a>
+                    {% if patient.has_alert %}
+                        <span style="color: red;" title="Unresolved alert">&#128308;</span>
+                    {% endif %}
+                    <form action="{% url 'therapist_portal:unassign_patient' patient.id %}" method="post"
+                          style="display: inline;"
+                          onsubmit="return confirm('Unassign {{ patient.user.username }}?');">
+                        {% csrf_token %}
+                        <button type="submit">Unassign</button>
+                    </form>
                 </li>
             {% endfor %}
         </ul>
