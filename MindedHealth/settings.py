@@ -115,6 +115,7 @@ INSTALLED_APPS = [
     "medications",
     "my_statistics",
     "what_interested_you",
+    "therapist_portal",
     "dashboard.templatetags.custom_filters",
     "axes",
     "django.contrib.admin",
