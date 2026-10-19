@@ -12,7 +12,11 @@ from django.contrib.auth import get_user_model
 from users.forms import CustomUserCreationForm, CustomAuthenticationForm
 from chat.services import get_room_name_for_user
 from therapist_portal.models import PatientAlert
+from therapist_portal.utils import get_last_activity_by_user
+from datetime import date
 User = get_user_model()
+
+INACTIVITY_THRESHOLD_DAYS = 5
 
 @login_required
 def therapist_dashboard(request):
@@ -23,13 +27,26 @@ def therapist_dashboard(request):
         return redirect('home')
 
     assigned_patients = list(therapist_profile.patients.select_related('user').all())
+    patient_user_ids = [p.user_id for p in assigned_patients]
+
     alerted_user_ids = set(
         PatientAlert.objects.filter(
-            user_id__in=[p.user_id for p in assigned_patients], resolved=False
+            user_id__in=patient_user_ids, resolved=False
         ).values_list('user_id', flat=True)
     )
+    last_activity_map = get_last_activity_by_user(patient_user_ids)
+    today = date.today()
+
     for patient in assigned_patients:
-        patient.has_alert = patient.user_id in alerted_user_ids
+        has_alert = patient.user_id in alerted_user_ids
+        last_activity = last_activity_map[patient.user_id]
+        days_since_activity = (today - last_activity).days if last_activity else None
+        inactive = days_since_activity is not None and days_since_activity >= INACTIVITY_THRESHOLD_DAYS
+
+        patient.has_alert = has_alert
+        patient.last_activity = last_activity
+        patient.days_since_activity = days_since_activity
+        patient.needs_attention = has_alert or inactive
 
     search_result = None
     error_message = None
