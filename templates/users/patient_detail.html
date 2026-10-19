@@ -11,6 +11,9 @@
         <a href="{% url 'my_statistics:statistics_view' %}?patient_id={{ patient.id }}">
             <button>View Statistics</button>
         </a>
+        <a href="{% url 'therapist_portal:patient_documentation' patient.id %}">
+            <button>Documentation</button>
+        </a>
     </p>
 
     <p><a href="{% url 'therapist_dashboard' %}">← Back to Dashboard</a></p>

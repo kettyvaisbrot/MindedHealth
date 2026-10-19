@@ -3,9 +3,11 @@ from datetime import date, timedelta
 from django.test import RequestFactory, TestCase, override_settings
 from django.urls import reverse
 
-from dashboard.models import FoodLog, SeizureLog
+from dashboard.models import FoodLog, MedicationIntakeLog, SeizureLog
+from medications.models import Medication
 from therapist_portal.models import PatientAlert
 from therapist_portal.utils import get_last_activity_by_user
+from therapist_portal.views import patient_documentation
 from users.models import PatientProfile, TherapistProfile, User
 from users.views import therapist_dashboard
 
@@ -207,3 +209,100 @@ class TherapistDashboardLastActivityTests(TestCase):
         response = self._get_dashboard()
 
         self.assertNotIn(b'Needs attention', response.content)
+
+
+class PatientDocumentationTests(TestCase):
+    """Uses RequestFactory for the same reason as TherapistDashboardLastActivityTests
+    above: self.client crashes on any template render in this environment."""
+
+    def setUp(self):
+        self.factory = RequestFactory()
+        self.therapist_user = User.objects.create_user(
+            username='doc_therapist', email='doc_therapist@example.com',
+            password='pass12345', role='therapist',
+        )
+        self.therapist_profile = TherapistProfile.objects.create(user=self.therapist_user)
+
+        self.other_therapist_user = User.objects.create_user(
+            username='doc_other_therapist', email='doc_other_therapist@example.com',
+            password='pass12345', role='therapist',
+        )
+        self.other_therapist_profile = TherapistProfile.objects.create(user=self.other_therapist_user)
+
+        self.patient_user = User.objects.create_user(
+            username='doc_patient', email='doc_patient@example.com',
+            password='pass12345', role='patient',
+        )
+        self.patient_profile = PatientProfile.objects.create(
+            user=self.patient_user, therapist=self.therapist_profile,
+        )
+        self.today = date.today()
+
+    def _get_documentation(self, user, selected_date=None):
+        url = reverse('therapist_portal:patient_documentation', args=[self.patient_profile.id])
+        if selected_date:
+            url += f'?date={selected_date}'
+        request = self.factory.get(url)
+        request.user = user
+        return patient_documentation(request, self.patient_profile.id)
+
+    def test_empty_state_when_no_documentation(self):
+        response = self._get_documentation(self.therapist_user, self.today)
+
+        self.assertIn(b'No documentation for this day', response.content)
+
+    def test_shows_food_log_details(self):
+        FoodLog.objects.create(
+            user=self.patient_user, date=self.today,
+            breakfast_ate=True, lunch_ate=False, dinner_ate=True,
+        )
+
+        response = self._get_documentation(self.therapist_user, self.today)
+
+        self.assertIn(b'Breakfast: Yes', response.content)
+        self.assertIn(b'Lunch: No', response.content)
+        self.assertIn(b'Dinner: Yes', response.content)
+        self.assertNotIn(b'No documentation for this day', response.content)
+
+    def test_shows_seizure_log_duration(self):
+        SeizureLog.objects.create(user=self.patient_user, date=self.today, duration_minutes=4)
+
+        response = self._get_documentation(self.therapist_user, self.today)
+
+        self.assertIn(b'Duration: 4 minutes', response.content)
+
+    def test_shows_medication_name_not_just_id(self):
+        medication = Medication.objects.create(
+            name='Aspirin', times_per_day=2, dose='100mg', user=self.patient_user,
+        )
+        MedicationIntakeLog.objects.create(
+            user=self.patient_user, medication_ref_id=medication.id,
+            date=self.today, dose_index=0,
+        )
+
+        response = self._get_documentation(self.therapist_user, self.today)
+
+        self.assertIn(b'Aspirin', response.content)
+
+    def test_only_shows_logs_for_selected_date(self):
+        other_day = self.today - timedelta(days=3)
+        FoodLog.objects.create(user=self.patient_user, date=other_day, breakfast_ate=True)
+
+        response = self._get_documentation(self.therapist_user, self.today)
+
+        self.assertIn(b'No documentation for this day', response.content)
+
+    def test_defaults_to_today_without_date_param(self):
+        FoodLog.objects.create(user=self.patient_user, date=self.today, breakfast_ate=True)
+
+        response = self._get_documentation(self.therapist_user, selected_date=None)
+
+        self.assertIn(b'Breakfast: Yes', response.content)
+
+    def test_non_owning_therapist_is_rejected(self):
+        FoodLog.objects.create(user=self.patient_user, date=self.today, breakfast_ate=True)
+
+        response = self._get_documentation(self.other_therapist_user, self.today)
+
+        self.assertEqual(response.status_code, 302)
+        self.assertNotIn(b'Breakfast', response.content)

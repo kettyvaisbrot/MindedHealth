@@ -1,0 +1,33 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>{{ patient.user.username }} - Documentation</title>
+</head>
+<body>
+    <h1>{{ patient.user.username }} — Documentation</h1>
+
+    <form method="get">
+        <label>Date:
+            <input type="date" name="date" value="{{ selected_date }}" onchange="this.form.submit()">
+        </label>
+    </form>
+
+    {% if has_documentation %}
+        {% for category in categories %}
+            <h3>{{ category.label }}</h3>
+            {% for entry in category.entries %}
+                <ul>
+                    {% for field_label, field_value in entry %}
+                        <li>{{ field_label }}: {{ field_value }}</li>
+                    {% endfor %}
+                </ul>
+            {% endfor %}
+        {% endfor %}
+    {% else %}
+        <p>No documentation for this day.</p>
+    {% endif %}
+
+    <p><a href="{% url 'patient_detail' patient.id %}">← Back to patient</a></p>
+</body>
+</html>
