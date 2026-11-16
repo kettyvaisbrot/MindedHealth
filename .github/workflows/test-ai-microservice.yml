@@ -28,4 +28,4 @@ jobs:
           pip install --no-cache-dir pytest httpx
 
       - name: Run tests
-        run: pytest ai_microservice/tests/
+        run: pytest ai_microservice/tests/ --confcutdir=ai_microservice

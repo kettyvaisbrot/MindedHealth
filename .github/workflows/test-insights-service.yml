@@ -43,4 +43,4 @@ jobs:
           pip install --no-cache-dir pytest httpx
 
       - name: Run tests
-        run: pytest insights_service/tests/
+        run: pytest insights_service/tests/ --confcutdir=insights_service
