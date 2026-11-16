@@ -2,8 +2,38 @@ name: Tests
 
 on:
   pull_request:
+    paths:
+      - "MindedHealth/**"
+      - "users/**"
+      - "dashboard/**"
+      - "therapist_portal/**"
+      - "medications/**"
+      - "my_statistics/**"
+      - "chatbot/**"
+      - "chat/**"
+      - "what_interested_you/**"
+      - "insights/**"
+      - "templates/**"
+      - "requirements-django.txt"
+      - "manage.py"
+      - ".github/workflows/test.yml"
   push:
     branches: [main]
+    paths:
+      - "MindedHealth/**"
+      - "users/**"
+      - "dashboard/**"
+      - "therapist_portal/**"
+      - "medications/**"
+      - "my_statistics/**"
+      - "chatbot/**"
+      - "chat/**"
+      - "what_interested_you/**"
+      - "insights/**"
+      - "templates/**"
+      - "requirements-django.txt"
+      - "manage.py"
+      - ".github/workflows/test.yml"
 
 jobs:
   test:

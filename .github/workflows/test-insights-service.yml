@@ -1,0 +1,46 @@
+name: Insights Service Tests
+
+on:
+  pull_request:
+    paths:
+      - "insights_service/**"
+      - ".github/workflows/test-insights-service.yml"
+  push:
+    branches: [main]
+    paths:
+      - "insights_service/**"
+      - ".github/workflows/test-insights-service.yml"
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+
+    env:
+      REDIS_HOST: "localhost"
+      REDIS_PORT: "6379"
+
+    services:
+      redis:
+        image: redis:7
+        ports:
+          - 6379:6379
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install dependencies
+        run: |
+          pip install --no-cache-dir -r insights_service/requirements.txt
+          pip install --no-cache-dir pytest httpx
+
+      - name: Run tests
+        run: pytest insights_service/tests/ --confcutdir=insights_service
