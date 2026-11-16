@@ -1,25 +1,24 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <title>Therapist Dashboard</title>
-</head>
-<body>
-    <h1>Welcome, {{ therapist.username }}</h1>
+{% extends 'base.html' %}
+
+{% block title %}Therapist Dashboard - MindedHealth{% endblock %}
+
+{% block content %}
+<div class="container">
+    <h2>Welcome, {{ therapist.username }}</h2>
 
     <h3>Which patient do you want to view?</h3>
 
     {% if assigned_patients %}
-        <ul>
+        <ul style="list-style: none; padding: 0;">
             {% for patient in assigned_patients %}
-                <li>
-                    <a href="{% url 'patient_detail' patient.id %}">
+                <li style="margin-bottom: 15px; display: flex; align-items: center; gap: 10px; flex-wrap: wrap;">
+                    <a href="{% url 'patient_detail' patient.id %}" style="font-weight: bold;">
                         {{ patient.user.username }}
                     </a>
                     {% if patient.last_activity %}
-                        — Last activity: {{ patient.days_since_activity }} day{{ patient.days_since_activity|pluralize }} ago
+                        <span>— Last activity: {{ patient.days_since_activity }} day{{ patient.days_since_activity|pluralize }} ago</span>
                     {% else %}
-                        — New patient
+                        <span>— New patient</span>
                     {% endif %}
                     {% if patient.needs_attention %}
                         <span style="color: red;" title="Needs attention">&#128308;</span>
@@ -28,7 +27,7 @@
                           style="display: inline;"
                           onsubmit="return confirm('Unassign {{ patient.user.username }}?');">
                         {% csrf_token %}
-                        <button type="submit">Unassign</button>
+                        <button type="submit" class="btn">Unassign</button>
                     </form>
                 </li>
             {% endfor %}
@@ -41,7 +40,7 @@
     <form method="post">
         {% csrf_token %}
         <input type="email" name="email" placeholder="Patient Email" required>
-        <button type="submit">Add Patient</button>
+        <button type="submit" class="btn">Add Patient</button>
     </form>
 
     {% if search_result %}
@@ -50,10 +49,5 @@
     {% if error_message %}
         <p style="color: red;">{{ error_message }}</p>
     {% endif %}
-
-    <form action="{% url 'logout' %}" method="post" style="margin-top: 20px;">
-        {% csrf_token %}
-        <button type="submit">Logout</button>
-    </form>
-</body>
-</html>
+</div>
+{% endblock %}

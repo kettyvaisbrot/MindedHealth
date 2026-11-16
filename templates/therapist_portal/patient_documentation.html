@@ -1,11 +1,10 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <title>{{ patient.user.username }} - Documentation</title>
-</head>
-<body>
-    <h1>{{ patient.user.username }} — Documentation</h1>
+{% extends 'base.html' %}
+
+{% block title %}{{ patient.user.username }} - Documentation - MindedHealth{% endblock %}
+
+{% block content %}
+<div class="container">
+    <h2>{{ patient.user.username }} — Documentation</h2>
 
     <form method="get">
         <label>Date:
@@ -29,5 +28,5 @@
     {% endif %}
 
     <p><a href="{% url 'patient_detail' patient.id %}">← Back to patient</a></p>
-</body>
-</html>
+</div>
+{% endblock %}
