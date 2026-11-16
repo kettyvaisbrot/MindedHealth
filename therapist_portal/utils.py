@@ -66,3 +66,30 @@ def get_seizures_in_range(user, start_date, end_date):
     return SeizureLog.objects.filter(
         user=user, date__gte=start_date, date__lte=end_date,
     )
+
+
+def get_medication_adherence(medication, start_date, end_date):
+    """Adherence for one medication over [start_date, end_date], clamped to
+    the days the medication has actually existed (its created_at) rather
+    than the full period if it was added partway through — otherwise
+    'expected' would count days the medication didn't exist yet.
+
+    The percentage is intentionally uncapped above 100: taking more doses
+    than prescribed is itself a signal worth surfacing, not a display bug
+    to hide behind a ceiling.
+    """
+    active_start = max(start_date, medication.created_at.date())
+    active_days = max((end_date - active_start).days + 1, 0)
+    expected = medication.times_per_day * active_days
+
+    taken = MedicationIntakeLog.objects.filter(
+        user=medication.user,
+        medication_ref_id=medication.id,
+        date__gte=active_start,
+        date__lte=end_date,
+        time_taken__isnull=False,
+    ).count()
+
+    percentage = round(taken / expected * 100) if expected > 0 else 0
+
+    return {'taken': taken, 'expected': expected, 'percentage': percentage}

@@ -1,4 +1,4 @@
-from datetime import date, timedelta
+from datetime import date, time, timedelta
 
 from django.test import RequestFactory, TestCase, override_settings
 from django.urls import reverse
@@ -6,8 +6,8 @@ from django.urls import reverse
 from dashboard.models import FoodLog, MedicationIntakeLog, SeizureLog
 from medications.models import Medication
 from therapist_portal.models import PatientAlert
-from therapist_portal.utils import get_last_activity_by_user, get_seizures_in_range
-from therapist_portal.views import patient_documentation, patient_seizures
+from therapist_portal.utils import get_last_activity_by_user, get_medication_adherence, get_seizures_in_range
+from therapist_portal.views import patient_documentation, patient_medications, patient_seizures
 from users.models import PatientProfile, TherapistProfile, User
 from users.views import therapist_dashboard
 
@@ -463,3 +463,243 @@ class PatientSeizuresTests(TestCase):
 
         self.assertIn(b'14:30', response.content)
         self.assertIn(b'7 minutes', response.content)
+
+
+class GetMedicationAdherenceTests(TestCase):
+    """Unit tests for the helper itself — no HTTP, no login involved."""
+
+    def setUp(self):
+        self.patient_user = User.objects.create_user(
+            username='adh_patient', email='adh_patient@example.com',
+            password='pass12345', role='patient',
+        )
+        self.medication = Medication.objects.create(
+            name='Aspirin', times_per_day=2, dose='100mg', user=self.patient_user,
+        )
+        self.today = date.today()
+
+    def _backdate(self, medication, days_ago):
+        medication.created_at = medication.created_at - timedelta(days=days_ago)
+        medication.save()
+
+    def test_active_for_full_period(self):
+        self._backdate(self.medication, 100)
+        start = self.today - timedelta(days=9)
+
+        result = get_medication_adherence(self.medication, start, self.today)
+
+        self.assertEqual(result['expected'], 2 * 10)
+
+    def test_created_mid_period_shrinks_expected(self):
+        self._backdate(self.medication, 4)
+        start = self.today - timedelta(days=9)
+
+        result = get_medication_adherence(self.medication, start, self.today)
+
+        self.assertEqual(result['expected'], 2 * 5)
+
+    def test_taken_counts_only_marked_as_taken(self):
+        self._backdate(self.medication, 100)
+        MedicationIntakeLog.objects.create(
+            user=self.patient_user, medication_ref_id=self.medication.id,
+            date=self.today, dose_index=0, time_taken=time(9, 0),
+        )
+        MedicationIntakeLog.objects.create(
+            user=self.patient_user, medication_ref_id=self.medication.id,
+            date=self.today, dose_index=1, time_taken=None,
+        )
+
+        result = get_medication_adherence(self.medication, self.today, self.today)
+
+        self.assertEqual(result['taken'], 1)
+
+    def test_taken_filtered_to_period(self):
+        self._backdate(self.medication, 100)
+        outside_day = self.today - timedelta(days=20)
+        MedicationIntakeLog.objects.create(
+            user=self.patient_user, medication_ref_id=self.medication.id,
+            date=outside_day, dose_index=0, time_taken=time(9, 0),
+        )
+
+        result = get_medication_adherence(
+            self.medication, self.today - timedelta(days=9), self.today,
+        )
+
+        self.assertEqual(result['taken'], 0)
+
+    def test_percentage_calculation(self):
+        med = Medication.objects.create(
+            name='Vitamin D', times_per_day=1, dose='1000IU', user=self.patient_user,
+        )
+        self._backdate(med, 100)
+        start = self.today - timedelta(days=29)
+        for i in range(15):
+            MedicationIntakeLog.objects.create(
+                user=self.patient_user, medication_ref_id=med.id,
+                date=start + timedelta(days=i), dose_index=0, time_taken=time(9, 0),
+            )
+
+        result = get_medication_adherence(med, start, self.today)
+
+        self.assertEqual(result['expected'], 30)
+        self.assertEqual(result['taken'], 15)
+        self.assertEqual(result['percentage'], 50)
+
+    def test_no_intake_logs_gives_zero_percent(self):
+        self._backdate(self.medication, 100)
+
+        result = get_medication_adherence(
+            self.medication, self.today - timedelta(days=9), self.today,
+        )
+
+        self.assertEqual(result['taken'], 0)
+        self.assertEqual(result['percentage'], 0)
+
+
+class PatientMedicationsTests(TestCase):
+    """Uses RequestFactory for the same reason as the other integration
+    tests in this file — see TherapistDashboardLastActivityTests."""
+
+    def setUp(self):
+        self.factory = RequestFactory()
+        self.therapist_user = User.objects.create_user(
+            username='med_therapist', email='med_therapist@example.com',
+            password='pass12345', role='therapist',
+        )
+        self.therapist_profile = TherapistProfile.objects.create(user=self.therapist_user)
+
+        self.other_therapist_user = User.objects.create_user(
+            username='med_other_therapist', email='med_other_therapist@example.com',
+            password='pass12345', role='therapist',
+        )
+        self.other_therapist_profile = TherapistProfile.objects.create(user=self.other_therapist_user)
+
+        self.patient_user = User.objects.create_user(
+            username='med_patient', email='med_patient@example.com',
+            password='pass12345', role='patient',
+        )
+        self.patient_profile = PatientProfile.objects.create(
+            user=self.patient_user, therapist=self.therapist_profile,
+        )
+        self.today = date.today()
+
+    def _backdate(self, medication, days_ago):
+        medication.created_at = medication.created_at - timedelta(days=days_ago)
+        medication.save()
+
+    def _get_medications(self, user, period=None):
+        url = reverse('therapist_portal:patient_medications', args=[self.patient_profile.id])
+        params = {'period': period} if period is not None else {}
+        request = self.factory.get(url, params)
+        request.user = user
+        return patient_medications(request, self.patient_profile.id)
+
+    def test_defaults_to_30_days(self):
+        med = Medication.objects.create(
+            name='Aspirin', times_per_day=1, dose='100mg', user=self.patient_user,
+        )
+        self._backdate(med, 100)
+        for i in range(30):
+            MedicationIntakeLog.objects.create(
+                user=self.patient_user, medication_ref_id=med.id,
+                date=self.today - timedelta(days=i), dose_index=0, time_taken=time(9, 0),
+            )
+
+        response = self._get_medications(self.therapist_user)
+
+        self.assertIn(b'100%', response.content)
+
+    def test_explicit_period_7_and_90_work(self):
+        med = Medication.objects.create(
+            name='Aspirin', times_per_day=1, dose='100mg', user=self.patient_user,
+        )
+        self._backdate(med, 100)
+        for i in range(7):
+            MedicationIntakeLog.objects.create(
+                user=self.patient_user, medication_ref_id=med.id,
+                date=self.today - timedelta(days=i), dose_index=0, time_taken=time(9, 0),
+            )
+
+        response_7 = self._get_medications(self.therapist_user, period=7)
+        response_90 = self._get_medications(self.therapist_user, period=90)
+
+        self.assertIn(b'100%', response_7.content)
+        # Same 7 taken doses against a 90-day expectation is a much lower percentage.
+        self.assertNotIn(b'100%', response_90.content)
+
+    def test_invalid_period_falls_back_to_30(self):
+        med = Medication.objects.create(
+            name='Aspirin', times_per_day=1, dose='100mg', user=self.patient_user,
+        )
+        self._backdate(med, 100)
+
+        response = self._get_medications(self.therapist_user, period=999)
+
+        self.assertIn(b'[30 days]', response.content)
+
+    def test_multiple_medications_shown_separately(self):
+        med_a = Medication.objects.create(
+            name='Aspirin', times_per_day=1, dose='100mg', user=self.patient_user,
+        )
+        med_b = Medication.objects.create(
+            name='Ibuprofen', times_per_day=1, dose='200mg', user=self.patient_user,
+        )
+        self._backdate(med_a, 100)
+        self._backdate(med_b, 100)
+
+        response = self._get_medications(self.therapist_user)
+
+        self.assertIn(b'Aspirin', response.content)
+        self.assertIn(b'Ibuprofen', response.content)
+
+    def test_no_medications_shows_message(self):
+        response = self._get_medications(self.therapist_user)
+
+        self.assertIn(b'No medications', response.content)
+
+    def test_non_owning_therapist_is_rejected(self):
+        med = Medication.objects.create(
+            name='Aspirin', times_per_day=1, dose='100mg', user=self.patient_user,
+        )
+        self._backdate(med, 100)
+
+        response = self._get_medications(self.other_therapist_user)
+
+        self.assertEqual(response.status_code, 302)
+        self.assertNotIn(b'Aspirin', response.content)
+
+    def test_mid_period_creation_end_to_end(self):
+        med = Medication.objects.create(
+            name='Aspirin', times_per_day=2, dose='100mg', user=self.patient_user,
+        )
+        self._backdate(med, 4)  # active for 5 of the 30 days -> expected = 10
+        for i in range(5):
+            MedicationIntakeLog.objects.create(
+                user=self.patient_user, medication_ref_id=med.id,
+                date=self.today - timedelta(days=i), dose_index=0, time_taken=time(9, 0),
+            )
+            MedicationIntakeLog.objects.create(
+                user=self.patient_user, medication_ref_id=med.id,
+                date=self.today - timedelta(days=i), dose_index=1, time_taken=time(21, 0),
+            )
+
+        response = self._get_medications(self.therapist_user)
+
+        self.assertIn(b'100%', response.content)
+        self.assertIn(b'10 / 10', response.content)
+
+    def test_taken_above_expected_is_not_capped(self):
+        med = Medication.objects.create(
+            name='Aspirin', times_per_day=1, dose='100mg', user=self.patient_user,
+        )
+        self._backdate(med, 1)  # active for 2 days -> expected = 2
+        for i in range(3):  # 3 logged doses against 2 expected -> 150%
+            MedicationIntakeLog.objects.create(
+                user=self.patient_user, medication_ref_id=med.id,
+                date=self.today, dose_index=i, time_taken=time(9 + i, 0),
+            )
+
+        response = self._get_medications(self.therapist_user)
+
+        self.assertIn(b'150%', response.content)
+        self.assertIn(b'above prescribed amount', response.content)

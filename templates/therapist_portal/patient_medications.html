@@ -1,0 +1,41 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>{{ patient.user.username }} - Medication Adherence</title>
+</head>
+<body>
+    <h1>{{ patient.user.username }} — Medication Adherence</h1>
+
+    <div>
+        {% for p in periods %}
+            {% if p == period %}
+                <strong>[{{ p }} days]</strong>
+            {% else %}
+                <a href="?period={{ p }}">{{ p }} days</a>
+            {% endif %}
+        {% endfor %}
+    </div>
+
+    {% if has_medications %}
+        <ul>
+            {% for med in medications %}
+                <li>
+                    {{ med.name }}:
+                    {% if med.percentage > 100 %}
+                        <span style="color: #B5412A; font-weight: 700;">{{ med.percentage }}%</span>
+                        <span style="font-size: 12px; color: #B5412A;">(above prescribed amount)</span>
+                    {% else %}
+                        {{ med.percentage }}%
+                    {% endif %}
+                    ({{ med.taken }} / {{ med.expected }} doses)
+                </li>
+            {% endfor %}
+        </ul>
+    {% else %}
+        <p>No medications.</p>
+    {% endif %}
+
+    <p><a href="{% url 'patient_detail' patient.id %}">← Back to patient</a></p>
+</body>
+</html>

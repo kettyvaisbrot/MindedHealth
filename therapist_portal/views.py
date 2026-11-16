@@ -1,5 +1,5 @@
 import calendar
-from datetime import date
+from datetime import date, timedelta
 
 from django.contrib.auth.decorators import login_required
 from django.shortcuts import redirect, render
@@ -15,7 +15,7 @@ from .formatters import (
     format_sleep,
     format_sport,
 )
-from .utils import get_owned_patient_or_404, get_seizures_in_range
+from .utils import get_medication_adherence, get_owned_patient_or_404, get_seizures_in_range
 
 LOG_CATEGORIES = [
     ('Food', FoodLog, format_food),
@@ -24,6 +24,8 @@ LOG_CATEGORIES = [
     ('Meetings', Meetings, format_meeting),
     ('Seizures', SeizureLog, format_seizure),
 ]
+
+ADHERENCE_PERIODS = (7, 30, 90)
 
 
 @login_required
@@ -136,3 +138,34 @@ def patient_seizures(request, patient_id):
         'is_current_month': (year, month) == (today.year, today.month),
     }
     return render(request, 'therapist_portal/patient_seizures.html', context)
+
+
+@login_required
+def patient_medications(request, patient_id):
+    patient, error = get_owned_patient_or_404(request, patient_id)
+    if error:
+        return error
+
+    try:
+        period = int(request.GET.get('period', 30))
+        if period not in ADHERENCE_PERIODS:
+            raise ValueError
+    except (TypeError, ValueError):
+        period = 30
+
+    end_date = date.today()
+    start_date = end_date - timedelta(days=period - 1)
+
+    medications = [
+        {'name': medication.name, **get_medication_adherence(medication, start_date, end_date)}
+        for medication in Medication.objects.filter(user=patient.user)
+    ]
+
+    context = {
+        'patient': patient,
+        'period': period,
+        'periods': ADHERENCE_PERIODS,
+        'medications': medications,
+        'has_medications': bool(medications),
+    }
+    return render(request, 'therapist_portal/patient_medications.html', context)
