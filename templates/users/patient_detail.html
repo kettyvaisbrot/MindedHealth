@@ -14,6 +14,9 @@
         <a href="{% url 'therapist_portal:patient_documentation' patient.id %}">
             <button>Documentation</button>
         </a>
+        <a href="{% url 'therapist_portal:patient_seizures' patient.id %}">
+            <button>Seizure Days</button>
+        </a>
     </p>
 
     <p><a href="{% url 'therapist_dashboard' %}">← Back to Dashboard</a></p>

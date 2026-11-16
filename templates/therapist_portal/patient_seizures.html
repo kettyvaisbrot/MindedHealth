@@ -1,0 +1,73 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>{{ patient.user.username }} - Seizure Days</title>
+    <style>
+        table.seizure-calendar { border-collapse: collapse; width: 100%; max-width: 420px; }
+        table.seizure-calendar th, table.seizure-calendar td {
+            border: 1px solid #ccc; width: 14.28%; height: 48px; text-align: center; vertical-align: top;
+        }
+        table.seizure-calendar td.has-seizure { background: #fbeae5; }
+        .seizure-count { display: block; font-size: 11px; color: #b5412a; }
+        .nav-header { display: flex; align-items: center; gap: 12px; }
+    </style>
+</head>
+<body>
+    <h1>{{ patient.user.username }} — Seizure Days</h1>
+
+    <div class="nav-header">
+        <a href="?year={{ prev_year }}&month={{ prev_month }}">&#9664;</a>
+        <strong>{{ month_name }}</strong>
+        {% if is_current_month %}
+            <span>&#9654;</span>
+        {% else %}
+            <a href="?year={{ next_year }}&month={{ next_month }}">&#9654;</a>
+        {% endif %}
+    </div>
+
+    <table class="seizure-calendar">
+        <thead>
+            <tr>
+                <th>Sun</th><th>Mon</th><th>Tue</th><th>Wed</th><th>Thu</th><th>Fri</th><th>Sat</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for week in weeks %}
+            <tr>
+                {% for cell in week %}
+                    {% if cell %}
+                        <td class="{% if cell.count %}has-seizure{% endif %}">
+                            {{ cell.day }}
+                            {% if cell.count %}
+                                <span class="seizure-count">{{ cell.count }} seizure{{ cell.count|pluralize }}</span>
+                            {% endif %}
+                        </td>
+                    {% else %}
+                        <td></td>
+                    {% endif %}
+                {% endfor %}
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+
+    <h3>Details</h3>
+    {% if has_seizures %}
+        {% for day in detail_days %}
+            <h4>Day {{ day.day }}</h4>
+            {% for entry in day.entries %}
+                <ul>
+                    {% for field_label, field_value in entry %}
+                        <li>{{ field_label }}: {{ field_value }}</li>
+                    {% endfor %}
+                </ul>
+            {% endfor %}
+        {% endfor %}
+    {% else %}
+        <p>No seizures this month.</p>
+    {% endif %}
+
+    <p><a href="{% url 'patient_detail' patient.id %}">← Back to patient</a></p>
+</body>
+</html>

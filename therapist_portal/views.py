@@ -1,3 +1,4 @@
+import calendar
 from datetime import date
 
 from django.contrib.auth.decorators import login_required
@@ -14,7 +15,7 @@ from .formatters import (
     format_sleep,
     format_sport,
 )
-from .utils import get_owned_patient_or_404
+from .utils import get_owned_patient_or_404, get_seizures_in_range
 
 LOG_CATEGORIES = [
     ('Food', FoodLog, format_food),
@@ -67,3 +68,71 @@ def patient_documentation(request, patient_id):
         'has_documentation': bool(categories),
     }
     return render(request, 'therapist_portal/patient_documentation.html', context)
+
+
+@login_required
+def patient_seizures(request, patient_id):
+    patient, error = get_owned_patient_or_404(request, patient_id)
+    if error:
+        return error
+
+    today = date.today()
+    try:
+        year = int(request.GET.get('year', today.year))
+        month = int(request.GET.get('month', today.month))
+        if not 1 <= month <= 12:
+            raise ValueError
+    except (TypeError, ValueError):
+        year, month = today.year, today.month
+
+    # Industry-standard soft clamp, not a hard error: a future month is a
+    # nonsensical request (nothing can exist there), not a security concern
+    # (get_owned_patient_or_404 above is the real auth boundary) — so we
+    # silently show the current month instead of rejecting the request.
+    if (year, month) > (today.year, today.month):
+        year, month = today.year, today.month
+
+    first_day = date(year, month, 1)
+    days_in_month = calendar.monthrange(year, month)[1]
+    last_day = date(year, month, days_in_month)
+
+    seizures = get_seizures_in_range(patient.user, first_day, last_day)
+    seizures_by_day = {}
+    for seizure in seizures:
+        seizures_by_day.setdefault(seizure.date.day, []).append(seizure)
+
+    cal = calendar.Calendar(firstweekday=6)  # weeks start Sunday
+    weeks = []
+    for week in cal.monthdayscalendar(year, month):
+        week_cells = []
+        for day_number in week:
+            if day_number == 0:
+                week_cells.append(None)
+            else:
+                week_cells.append({
+                    'day': day_number,
+                    'count': len(seizures_by_day.get(day_number, [])),
+                })
+        weeks.append(week_cells)
+
+    detail_days = [
+        {'day': day_number, 'entries': [format_seizure(s) for s in seizures_by_day[day_number]]}
+        for day_number in sorted(seizures_by_day)
+    ]
+
+    prev_year, prev_month = (year - 1, 12) if month == 1 else (year, month - 1)
+    next_year, next_month = (year + 1, 1) if month == 12 else (year, month + 1)
+
+    context = {
+        'patient': patient,
+        'month_name': first_day.strftime('%B %Y'),
+        'weeks': weeks,
+        'detail_days': detail_days,
+        'has_seizures': bool(detail_days),
+        'prev_year': prev_year,
+        'prev_month': prev_month,
+        'next_year': next_year,
+        'next_month': next_month,
+        'is_current_month': (year, month) == (today.year, today.month),
+    }
+    return render(request, 'therapist_portal/patient_seizures.html', context)

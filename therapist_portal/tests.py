@@ -6,8 +6,8 @@ from django.urls import reverse
 from dashboard.models import FoodLog, MedicationIntakeLog, SeizureLog
 from medications.models import Medication
 from therapist_portal.models import PatientAlert
-from therapist_portal.utils import get_last_activity_by_user
-from therapist_portal.views import patient_documentation
+from therapist_portal.utils import get_last_activity_by_user, get_seizures_in_range
+from therapist_portal.views import patient_documentation, patient_seizures
 from users.models import PatientProfile, TherapistProfile, User
 from users.views import therapist_dashboard
 
@@ -306,3 +306,160 @@ class PatientDocumentationTests(TestCase):
 
         self.assertEqual(response.status_code, 302)
         self.assertNotIn(b'Breakfast', response.content)
+
+
+class GetSeizuresInRangeTests(TestCase):
+    """Unit tests for the helper itself — no HTTP, no login involved."""
+
+    def setUp(self):
+        self.user_a = User.objects.create_user(
+            username='seizure_a', email='seizure_a@example.com',
+            password='pass12345', role='patient',
+        )
+        self.user_b = User.objects.create_user(
+            username='seizure_b', email='seizure_b@example.com',
+            password='pass12345', role='patient',
+        )
+
+    def test_seizure_inside_range_is_returned(self):
+        d = date(2026, 6, 15)
+        SeizureLog.objects.create(user=self.user_a, date=d, duration_minutes=3)
+
+        result = get_seizures_in_range(self.user_a, date(2026, 6, 1), date(2026, 6, 30))
+
+        self.assertEqual(result.count(), 1)
+
+    def test_seizure_outside_range_is_excluded(self):
+        SeizureLog.objects.create(user=self.user_a, date=date(2026, 5, 31), duration_minutes=3)
+        SeizureLog.objects.create(user=self.user_a, date=date(2026, 7, 1), duration_minutes=3)
+
+        result = get_seizures_in_range(self.user_a, date(2026, 6, 1), date(2026, 6, 30))
+
+        self.assertEqual(result.count(), 0)
+
+    def test_range_boundaries_are_inclusive(self):
+        SeizureLog.objects.create(user=self.user_a, date=date(2026, 6, 1), duration_minutes=3)
+        SeizureLog.objects.create(user=self.user_a, date=date(2026, 6, 30), duration_minutes=3)
+
+        result = get_seizures_in_range(self.user_a, date(2026, 6, 1), date(2026, 6, 30))
+
+        self.assertEqual(result.count(), 2)
+
+    def test_no_seizures_returns_empty(self):
+        result = get_seizures_in_range(self.user_a, date(2026, 6, 1), date(2026, 6, 30))
+
+        self.assertEqual(result.count(), 0)
+
+    def test_other_users_seizures_do_not_leak(self):
+        SeizureLog.objects.create(user=self.user_b, date=date(2026, 6, 15), duration_minutes=3)
+
+        result = get_seizures_in_range(self.user_a, date(2026, 6, 1), date(2026, 6, 30))
+
+        self.assertEqual(result.count(), 0)
+
+
+class PatientSeizuresTests(TestCase):
+    """Uses RequestFactory for the same reason as the other integration
+    tests in this file — see TherapistDashboardLastActivityTests."""
+
+    def setUp(self):
+        self.factory = RequestFactory()
+        self.therapist_user = User.objects.create_user(
+            username='sz_therapist', email='sz_therapist@example.com',
+            password='pass12345', role='therapist',
+        )
+        self.therapist_profile = TherapistProfile.objects.create(user=self.therapist_user)
+
+        self.other_therapist_user = User.objects.create_user(
+            username='sz_other_therapist', email='sz_other_therapist@example.com',
+            password='pass12345', role='therapist',
+        )
+        self.other_therapist_profile = TherapistProfile.objects.create(user=self.other_therapist_user)
+
+        self.patient_user = User.objects.create_user(
+            username='sz_patient', email='sz_patient@example.com',
+            password='pass12345', role='patient',
+        )
+        self.patient_profile = PatientProfile.objects.create(
+            user=self.patient_user, therapist=self.therapist_profile,
+        )
+        self.today = date.today()
+
+    def _get_seizures(self, user, year=None, month=None):
+        url = reverse('therapist_portal:patient_seizures', args=[self.patient_profile.id])
+        params = {}
+        if year is not None:
+            params['year'] = year
+        if month is not None:
+            params['month'] = month
+        request = self.factory.get(url, params)
+        request.user = user
+        return patient_seizures(request, self.patient_profile.id)
+
+    def test_defaults_to_current_month(self):
+        SeizureLog.objects.create(user=self.patient_user, date=self.today, duration_minutes=2)
+
+        response = self._get_seizures(self.therapist_user)
+
+        self.assertIn(b'1 seizure', response.content)
+
+    def test_explicit_year_month_is_honored(self):
+        SeizureLog.objects.create(user=self.patient_user, date=date(2026, 3, 10), duration_minutes=2)
+
+        response = self._get_seizures(self.therapist_user, year=2026, month=3)
+
+        self.assertIn(b'1 seizure', response.content)
+
+    def test_multiple_seizures_same_day_are_grouped(self):
+        d = date(2026, 3, 10)
+        SeizureLog.objects.create(user=self.patient_user, date=d, duration_minutes=2)
+        SeizureLog.objects.create(user=self.patient_user, date=d, duration_minutes=5)
+
+        response = self._get_seizures(self.therapist_user, year=2026, month=3)
+
+        self.assertIn(b'2 seizures', response.content)
+        self.assertNotIn(b'1 seizure<', response.content)
+
+    def test_single_seizure_shows_count_one(self):
+        SeizureLog.objects.create(user=self.patient_user, date=date(2026, 3, 10), duration_minutes=2)
+
+        response = self._get_seizures(self.therapist_user, year=2026, month=3)
+
+        self.assertIn(b'1 seizure', response.content)
+
+    def test_day_without_seizures_has_no_marker(self):
+        response = self._get_seizures(self.therapist_user, year=2026, month=3)
+
+        self.assertNotIn(b'class="has-seizure"', response.content)
+
+    def test_future_month_requested_via_url_is_clamped(self):
+        future_year = self.today.year + 5
+
+        response = self._get_seizures(self.therapist_user, year=future_year, month=1)
+
+        self.assertIn(self.today.strftime('%B %Y').encode(), response.content)
+
+    def test_empty_month_renders_without_crashing(self):
+        response = self._get_seizures(self.therapist_user, year=2026, month=3)
+
+        self.assertEqual(response.status_code, 200)
+        self.assertIn(b'No seizures this month', response.content)
+
+    def test_non_owning_therapist_is_rejected(self):
+        SeizureLog.objects.create(user=self.patient_user, date=date(2026, 3, 10), duration_minutes=2)
+
+        response = self._get_seizures(self.other_therapist_user, year=2026, month=3)
+
+        self.assertEqual(response.status_code, 302)
+        self.assertNotIn(b'seizure', response.content)
+
+    def test_detail_list_shows_time_and_duration(self):
+        from datetime import time
+        SeizureLog.objects.create(
+            user=self.patient_user, date=date(2026, 3, 10), time=time(14, 30), duration_minutes=7,
+        )
+
+        response = self._get_seizures(self.therapist_user, year=2026, month=3)
+
+        self.assertIn(b'14:30', response.content)
+        self.assertIn(b'7 minutes', response.content)

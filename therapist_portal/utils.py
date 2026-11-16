@@ -56,3 +56,13 @@ def get_last_activity_by_user(user_ids):
                 result[uid] = last_date
 
     return result
+
+
+def get_seizures_in_range(user, start_date, end_date):
+    """All SeizureLog rows for `user` between start_date and end_date
+    (inclusive on both ends), one query. Shared by the seizure-days
+    calendar (a calendar month) and the patient overview strip (a
+    rolling 30-day window) — callers just pass different dates."""
+    return SeizureLog.objects.filter(
+        user=user, date__gte=start_date, date__lte=end_date,
+    )
