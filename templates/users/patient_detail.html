@@ -1,27 +1,18 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <title>{{ patient.user.username }} - Detail</title>
-</head>
-<body>
-    <h1>{{ patient.user.username }}</h1>
+{% extends 'base.html' %}
 
-    <p>
-        <a href="{% url 'my_statistics:statistics_view' %}?patient_id={{ patient.id }}">
-            <button>View Statistics</button>
-        </a>
-        <a href="{% url 'therapist_portal:patient_documentation' patient.id %}">
-            <button>Documentation</button>
-        </a>
-        <a href="{% url 'therapist_portal:patient_seizures' patient.id %}">
-            <button>Seizure Days</button>
-        </a>
-        <a href="{% url 'therapist_portal:patient_medications' patient.id %}">
-            <button>Medications</button>
-        </a>
-    </p>
+{% block title %}{{ patient.user.username }} - MindedHealth{% endblock %}
 
-    <p><a href="{% url 'therapist_dashboard' %}">← Back to Dashboard</a></p>
-</body>
-</html>
+{% block content %}
+<div class="container">
+    <h2>{{ patient.user.username }}</h2>
+
+    <div style="display: flex; flex-wrap: wrap; gap: 10px;">
+        <a href="{% url 'my_statistics:statistics_view' %}?patient_id={{ patient.id }}" class="btn">View Statistics</a>
+        <a href="{% url 'therapist_portal:patient_documentation' patient.id %}" class="btn">Documentation</a>
+        <a href="{% url 'therapist_portal:patient_seizures' patient.id %}" class="btn">Seizure Days</a>
+        <a href="{% url 'therapist_portal:patient_medications' patient.id %}" class="btn">Medications</a>
+    </div>
+
+    <p style="margin-top: 20px;"><a href="{% url 'therapist_dashboard' %}">← Back to Dashboard</a></p>
+</div>
+{% endblock %}

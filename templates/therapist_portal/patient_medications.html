@@ -1,18 +1,17 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <title>{{ patient.user.username }} - Medication Adherence</title>
-</head>
-<body>
-    <h1>{{ patient.user.username }} — Medication Adherence</h1>
+{% extends 'base.html' %}
 
-    <div>
+{% block title %}{{ patient.user.username }} - Medication Adherence - MindedHealth{% endblock %}
+
+{% block content %}
+<div class="container">
+    <h2>{{ patient.user.username }} — Medication Adherence</h2>
+
+    <div style="margin-bottom: 15px;">
         {% for p in periods %}
             {% if p == period %}
-                <strong>[{{ p }} days]</strong>
+                <strong style="margin-right: 10px;">[{{ p }} days]</strong>
             {% else %}
-                <a href="?period={{ p }}">{{ p }} days</a>
+                <a href="?period={{ p }}" style="margin-right: 10px; color: #007bff; font-weight: bold;">{{ p }} days</a>
             {% endif %}
         {% endfor %}
     </div>
@@ -37,5 +36,5 @@
     {% endif %}
 
     <p><a href="{% url 'patient_detail' patient.id %}">← Back to patient</a></p>
-</body>
-</html>
+</div>
+{% endblock %}
