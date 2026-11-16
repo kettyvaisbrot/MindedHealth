@@ -6,10 +6,15 @@ from django.urls import reverse
 from dashboard.models import FoodLog, MedicationIntakeLog, SeizureLog
 from medications.models import Medication
 from therapist_portal.models import PatientAlert
-from therapist_portal.utils import get_last_activity_by_user, get_medication_adherence, get_seizures_in_range
+from therapist_portal.utils import (
+    get_last_activity_by_user,
+    get_medication_adherence,
+    get_patients_with_medication_overuse,
+    get_seizures_in_range,
+)
 from therapist_portal.views import patient_documentation, patient_medications, patient_seizures
 from users.models import PatientProfile, TherapistProfile, User
-from users.views import therapist_dashboard
+from users.views import patient_detail, therapist_dashboard
 
 
 @override_settings(
@@ -205,6 +210,41 @@ class TherapistDashboardLastActivityTests(TestCase):
         PatientAlert.objects.create(
             user=self.patient_user, room_name='room1', reason='test', resolved=True,
         )
+
+        response = self._get_dashboard()
+
+        self.assertNotIn(b'Needs attention', response.content)
+
+    def test_medication_overuse_alone_is_flagged(self):
+        from medications.models import Medication
+        from dashboard.models import MedicationIntakeLog
+        from datetime import time as time_cls
+
+        FoodLog.objects.create(user=self.patient_user, date=date.today())
+        medication = Medication.objects.create(
+            name='Aspirin', times_per_day=1, dose='100mg', user=self.patient_user,
+        )
+        medication.created_at = medication.created_at - timedelta(days=1)
+        medication.save()
+        for i in range(3):
+            MedicationIntakeLog.objects.create(
+                user=self.patient_user, medication_ref_id=medication.id,
+                date=date.today(), dose_index=i, time_taken=time_cls(9 + i, 0),
+            )
+
+        response = self._get_dashboard()
+
+        self.assertIn(b'Needs attention', response.content)
+
+    def test_no_overuse_no_alert_active_is_not_flagged(self):
+        from medications.models import Medication
+
+        FoodLog.objects.create(user=self.patient_user, date=date.today())
+        medication = Medication.objects.create(
+            name='Aspirin', times_per_day=1, dose='100mg', user=self.patient_user,
+        )
+        medication.created_at = medication.created_at - timedelta(days=30)
+        medication.save()
 
         response = self._get_dashboard()
 
@@ -703,3 +743,215 @@ class PatientMedicationsTests(TestCase):
 
         self.assertIn(b'150%', response.content)
         self.assertIn(b'above prescribed amount', response.content)
+
+
+class GetPatientsWithMedicationOveruseTests(TestCase):
+    """Unit tests for the helper itself — no HTTP, no login involved."""
+
+    def setUp(self):
+        self.user_a = User.objects.create_user(
+            username='overuse_a', email='overuse_a@example.com',
+            password='pass12345', role='patient',
+        )
+        self.user_b = User.objects.create_user(
+            username='overuse_b', email='overuse_b@example.com',
+            password='pass12345', role='patient',
+        )
+
+    def _backdate(self, medication, days_ago):
+        medication.created_at = medication.created_at - timedelta(days=days_ago)
+        medication.save()
+
+    def test_patient_with_overuse_returns_true(self):
+        med = Medication.objects.create(
+            name='Aspirin', times_per_day=1, dose='100mg', user=self.user_a,
+        )
+        self._backdate(med, 1)  # active 2 days -> expected 2
+        for i in range(3):
+            MedicationIntakeLog.objects.create(
+                user=self.user_a, medication_ref_id=med.id,
+                date=date.today(), dose_index=i, time_taken=time(9 + i, 0),
+            )
+
+        result = get_patients_with_medication_overuse([self.user_a.id])
+
+        self.assertTrue(result[self.user_a.id])
+
+    def test_patient_without_overuse_returns_false(self):
+        med = Medication.objects.create(
+            name='Aspirin', times_per_day=2, dose='100mg', user=self.user_a,
+        )
+        self._backdate(med, 30)
+        MedicationIntakeLog.objects.create(
+            user=self.user_a, medication_ref_id=med.id,
+            date=date.today(), dose_index=0, time_taken=time(9, 0),
+        )
+
+        result = get_patients_with_medication_overuse([self.user_a.id])
+
+        self.assertFalse(result[self.user_a.id])
+
+    def test_patient_without_medications_returns_false(self):
+        result = get_patients_with_medication_overuse([self.user_a.id])
+
+        self.assertFalse(result[self.user_a.id])
+
+    def test_query_count_is_constant(self):
+        med = Medication.objects.create(
+            name='Aspirin', times_per_day=1, dose='100mg', user=self.user_a,
+        )
+        self._backdate(med, 30)
+
+        with self.assertNumQueries(2):
+            get_patients_with_medication_overuse([self.user_a.id])
+
+        many_ids = [self.user_a.id, self.user_b.id] + list(range(9000, 9010))
+        with self.assertNumQueries(2):
+            get_patients_with_medication_overuse(many_ids)
+
+    def test_no_cross_contamination_between_patients(self):
+        med_a = Medication.objects.create(
+            name='Aspirin', times_per_day=1, dose='100mg', user=self.user_a,
+        )
+        self._backdate(med_a, 1)
+        for i in range(3):
+            MedicationIntakeLog.objects.create(
+                user=self.user_a, medication_ref_id=med_a.id,
+                date=date.today(), dose_index=i, time_taken=time(9 + i, 0),
+            )
+
+        med_b = Medication.objects.create(
+            name='Vitamin D', times_per_day=2, dose='1000IU', user=self.user_b,
+        )
+        self._backdate(med_b, 30)
+
+        result = get_patients_with_medication_overuse([self.user_a.id, self.user_b.id])
+
+        self.assertTrue(result[self.user_a.id])
+        self.assertFalse(result[self.user_b.id])
+
+
+class PatientDetailOverviewTests(TestCase):
+    """Uses RequestFactory for the same reason as the other integration
+    tests in this file — see TherapistDashboardLastActivityTests."""
+
+    def setUp(self):
+        self.factory = RequestFactory()
+        self.therapist_user = User.objects.create_user(
+            username='ov_therapist', email='ov_therapist@example.com',
+            password='pass12345', role='therapist',
+        )
+        self.therapist_profile = TherapistProfile.objects.create(user=self.therapist_user)
+        self.patient_user = User.objects.create_user(
+            username='ov_patient', email='ov_patient@example.com',
+            password='pass12345', role='patient',
+        )
+        self.patient_profile = PatientProfile.objects.create(
+            user=self.patient_user, therapist=self.therapist_profile,
+        )
+        self.today = date.today()
+
+    def _backdate(self, medication, days_ago):
+        medication.created_at = medication.created_at - timedelta(days=days_ago)
+        medication.save()
+
+    def _get_detail(self):
+        request = self.factory.get(reverse('patient_detail', args=[self.patient_profile.id]))
+        request.user = self.therapist_user
+        return patient_detail(request, self.patient_profile.id)
+
+    def test_last_activity_card_shows_text_and_is_not_a_link(self):
+        FoodLog.objects.create(user=self.patient_user, date=self.today)
+
+        response = self._get_detail()
+
+        self.assertIn(b'Last activity', response.content)
+        self.assertIn(b'0 day', response.content)
+
+    def test_seizure_count_shows_correct_number(self):
+        SeizureLog.objects.create(user=self.patient_user, date=self.today, duration_minutes=2)
+        SeizureLog.objects.create(user=self.patient_user, date=self.today - timedelta(days=5), duration_minutes=2)
+
+        response = self._get_detail()
+
+        self.assertIn(b'<div class="value">2</div>', response.content)
+
+    def test_single_medication_shows_no_more_suffix(self):
+        med = Medication.objects.create(
+            name='Aspirin', times_per_day=1, dose='100mg', user=self.patient_user,
+        )
+        self._backdate(med, 30)
+
+        response = self._get_detail()
+
+        self.assertIn(b'0%', response.content)
+        self.assertNotIn(b'more', response.content)
+
+    def test_multiple_medications_none_over_100_shows_lowest_plus_more(self):
+        med_a = Medication.objects.create(
+            name='Aspirin', times_per_day=1, dose='100mg', user=self.patient_user,
+        )
+        self._backdate(med_a, 30)
+        for i in range(30):
+            MedicationIntakeLog.objects.create(
+                user=self.patient_user, medication_ref_id=med_a.id,
+                date=self.today - timedelta(days=i), dose_index=0, time_taken=time(9, 0),
+            )
+        med_b = Medication.objects.create(
+            name='Vitamin D', times_per_day=1, dose='1000IU', user=self.patient_user,
+        )
+        self._backdate(med_b, 30)  # no intake logs -> 0%
+
+        response = self._get_detail()
+
+        self.assertIn(b'0%', response.content)
+        self.assertIn(b'+1 more', response.content)
+
+    def test_multiple_medications_one_over_100_shows_that_one_plus_more(self):
+        med_a = Medication.objects.create(
+            name='Aspirin', times_per_day=1, dose='100mg', user=self.patient_user,
+        )
+        self._backdate(med_a, 30)
+        for i in range(30):
+            MedicationIntakeLog.objects.create(
+                user=self.patient_user, medication_ref_id=med_a.id,
+                date=self.today - timedelta(days=i), dose_index=0, time_taken=time(9, 0),
+            )
+        med_b = Medication.objects.create(
+            name='Ibuprofen', times_per_day=1, dose='200mg', user=self.patient_user,
+        )
+        self._backdate(med_b, 1)  # active 2 days -> expected 2
+        for i in range(3):
+            MedicationIntakeLog.objects.create(
+                user=self.patient_user, medication_ref_id=med_b.id,
+                date=self.today, dose_index=i, time_taken=time(9 + i, 0),
+            )
+
+        response = self._get_detail()
+
+        self.assertIn(b'150%', response.content)
+        self.assertIn(b'+1 more', response.content)
+
+    def test_no_medications_shows_message(self):
+        response = self._get_detail()
+
+        self.assertIn(b'No medications', response.content)
+
+    def test_medications_card_links_to_medications_page(self):
+        response = self._get_detail()
+
+        expected_url = reverse('therapist_portal:patient_medications', args=[self.patient_profile.id])
+        self.assertIn(expected_url.encode(), response.content)
+
+    def test_seizures_card_links_to_seizures_page(self):
+        response = self._get_detail()
+
+        expected_url = reverse('therapist_portal:patient_seizures', args=[self.patient_profile.id])
+        self.assertIn(expected_url.encode(), response.content)
+
+    def test_no_medications_and_zero_seizures_renders_without_crash(self):
+        response = self._get_detail()
+
+        self.assertEqual(response.status_code, 200)
+        self.assertIn(b'No medications', response.content)
+        self.assertIn(b'<div class="value">0</div>', response.content)

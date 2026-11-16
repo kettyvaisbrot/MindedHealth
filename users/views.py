@@ -12,11 +12,18 @@ from django.contrib.auth import get_user_model
 from users.forms import CustomUserCreationForm, CustomAuthenticationForm
 from chat.services import get_room_name_for_user
 from therapist_portal.models import PatientAlert
-from therapist_portal.utils import get_last_activity_by_user
-from datetime import date
+from therapist_portal.utils import (
+    get_last_activity_by_user,
+    get_medication_adherence,
+    get_patients_with_medication_overuse,
+    get_seizures_in_range,
+)
+from medications.models import Medication
+from datetime import date, timedelta
 User = get_user_model()
 
 INACTIVITY_THRESHOLD_DAYS = 5
+OVERVIEW_WINDOW_DAYS = 30
 
 @login_required
 def therapist_dashboard(request):
@@ -35,6 +42,7 @@ def therapist_dashboard(request):
         ).values_list('user_id', flat=True)
     )
     last_activity_map = get_last_activity_by_user(patient_user_ids)
+    overuse_map = get_patients_with_medication_overuse(patient_user_ids)
     today = date.today()
 
     for patient in assigned_patients:
@@ -42,11 +50,12 @@ def therapist_dashboard(request):
         last_activity = last_activity_map[patient.user_id]
         days_since_activity = (today - last_activity).days if last_activity else None
         inactive = days_since_activity is not None and days_since_activity >= INACTIVITY_THRESHOLD_DAYS
+        medication_overuse = overuse_map[patient.user_id]
 
         patient.has_alert = has_alert
         patient.last_activity = last_activity
         patient.days_since_activity = days_since_activity
-        patient.needs_attention = has_alert or inactive
+        patient.needs_attention = has_alert or inactive or medication_overuse
 
     search_result = None
     error_message = None
@@ -102,7 +111,35 @@ def patient_detail(request, patient_id):
     if patient.therapist != therapist_profile:
         return redirect('home')
 
-    return render(request, 'users/patient_detail.html', {'patient': patient})
+    today = date.today()
+    window_start = today - timedelta(days=OVERVIEW_WINDOW_DAYS - 1)
+
+    last_activity = get_last_activity_by_user([patient.user_id])[patient.user_id]
+    days_since_activity = (today - last_activity).days if last_activity else None
+
+    seizure_count_30d = get_seizures_in_range(patient.user, window_start, today).count()
+
+    medication_percentages = [
+        (medication.name, get_medication_adherence(medication, window_start, today)['percentage'])
+        for medication in Medication.objects.filter(user=patient.user)
+    ]
+    headline_medication = None
+    extra_medication_count = 0
+    if medication_percentages:
+        over_100 = [m for m in medication_percentages if m[1] > 100]
+        headline_medication = max(over_100, key=lambda m: m[1]) if over_100 else min(medication_percentages, key=lambda m: m[1])
+        extra_medication_count = len(medication_percentages) - 1
+
+    context = {
+        'patient': patient,
+        'has_activity': last_activity is not None,
+        'days_since_activity': days_since_activity,
+        'seizure_count_30d': seizure_count_30d,
+        'has_medications': bool(medication_percentages),
+        'headline_medication': headline_medication,
+        'extra_medication_count': extra_medication_count,
+    }
+    return render(request, 'users/patient_detail.html', context)
 
 
 
