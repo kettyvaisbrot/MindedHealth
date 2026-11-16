@@ -15,6 +15,9 @@ jobs:
   test:
     runs-on: ubuntu-latest
 
+    env:
+      OPENAI_API_KEY: "sk-ci-throwaway-not-a-real-key"
+
     steps:
       - uses: actions/checkout@v4
 
