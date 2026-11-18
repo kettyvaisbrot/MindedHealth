@@ -122,9 +122,14 @@ data "aws_ami" "amazon_linux" {
   most_recent = true
   owners      = ["amazon"]
 
+  # "al2023-ami-*-x86_64" also matches the "minimal" variant
+  # (al2023-ami-minimal-...), which ships WITHOUT the SSM agent
+  # pre-installed -- the instance would never register with SSM. The
+  # standard image's name starts with a version number right after
+  # "al2023-ami-", so this pattern excludes "minimal-" specifically.
   filter {
     name   = "name"
-    values = ["al2023-ami-*-x86_64"]
+    values = ["al2023-ami-2*-x86_64"]
   }
 }
 
@@ -135,8 +140,22 @@ resource "aws_instance" "app" {
   vpc_security_group_ids = [aws_security_group.app_sg.id]
   iam_instance_profile   = aws_iam_instance_profile.app_ssm_profile.name
 
+  root_block_device {
+    volume_size = 20
+    volume_type = "gp3"
+  }
+
   user_data = <<-EOF
     #!/bin/bash
+    # 1GB RAM runs Django + 2 FastAPI services + Postgres + Redis + Caddy
+    # at once -- a swap file keeps the kernel from OOM-killing one of them
+    # under a momentary memory spike instead of just running slower.
+    fallocate -l 1G /swapfile
+    chmod 600 /swapfile
+    mkswap /swapfile
+    swapon /swapfile
+    echo '/swapfile none swap sw 0 0' >> /etc/fstab
+
     dnf install -y docker
     systemctl enable --now docker
     curl -SL https://github.com/docker/compose/releases/latest/download/docker-compose-linux-x86_64 -o /usr/local/bin/docker-compose
@@ -160,74 +179,6 @@ resource "aws_eip" "app" {
   }
 }
 
-
-#####################
-# RDS (PostgreSQL)  #
-#####################
-
-# Security group for RDS – allow only from the app server
-resource "aws_security_group" "rds_sg" {
-  name        = "${var.project_name}-rds-sg"
-  description = "Allow Postgres access from the app server"
-  vpc_id      = module.vpc.vpc_id
-
-  ingress {
-    description = "Postgres from the app server"
-    from_port   = 5432
-    to_port     = 5432
-    protocol    = "tcp"
-    security_groups = [
-      aws_security_group.app_sg.id
-    ]
-  }
-
-  egress {
-    from_port   = 0
-    to_port     = 0
-    protocol    = "-1"
-    cidr_blocks = ["0.0.0.0/0"]
-  }
-
-  tags = {
-    Name    = "${var.project_name}-rds-sg"
-    Project = var.project_name
-  }
-}
-
-# RDS subnet group uses private subnets
-resource "aws_db_subnet_group" "rds_subnets" {
-  name       = "${var.project_name}-rds-subnet-group"
-  subnet_ids = module.vpc.private_subnets
-
-  tags = {
-    Name    = "${var.project_name}-rds-subnet-group"
-    Project = var.project_name
-  }
-}
-
-resource "aws_db_instance" "postgres" {
-  identifier = "${var.project_name}-postgres"
-
-  engine            = "postgres"
-  engine_version    = "15"
-  instance_class    = "db.t3.micro"
-  allocated_storage = 20
-
-  username = var.db_username
-  password = var.db_password
-  db_name  = var.db_name
-
-  db_subnet_group_name   = aws_db_subnet_group.rds_subnets.name
-  vpc_security_group_ids = [aws_security_group.rds_sg.id]
-
-  publicly_accessible = false
-  skip_final_snapshot = true
-
-  tags = {
-    Name    = "${var.project_name}-postgres"
-    Project = var.project_name
-  }
-}
 
 #############################################
 # GitHub Actions OIDC (no long-lived keys)  #
@@ -289,6 +240,16 @@ resource "aws_iam_role_policy" "github_actions_deploy_policy" {
         Sid      = "ReadDeployCommandResult"
         Effect   = "Allow"
         Action   = "ssm:GetCommandInvocation"
+        Resource = "*"
+      },
+      {
+        # Lets the deploy workflow look up the current instance ID by its
+        # Name tag instead of a hardcoded ID, so it keeps working after
+        # terraform recreates the instance. DescribeInstances has no
+        # resource-level restriction in IAM, hence "*" -- it is read-only.
+        Sid      = "LookUpAppInstance"
+        Effect   = "Allow"
+        Action   = "ec2:DescribeInstances"
         Resource = "*"
       }
     ]

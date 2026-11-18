@@ -1,19 +1,30 @@
 name: Deploy
 
+# Runs only after the matching test workflow has finished on main -- never
+# deploys code that hasn't passed its own CI. Each job below further checks
+# which of the three test workflows triggered it, since GitHub doesn't let a
+# single workflow_run trigger be scoped to one source workflow per job.
 on:
-  push:
-    branches: [main]
+  workflow_run:
+    workflows: ["Tests", "AI Microservice Tests", "Insights Service Tests"]
+    types: [completed]
 
 permissions:
   id-token: write   # required to request the OIDC token
   contents: read
 
 jobs:
-  build-and-deploy:
+  deploy-django:
+    if: >
+      github.event.workflow_run.name == 'Tests' &&
+      github.event.workflow_run.conclusion == 'success' &&
+      github.event.workflow_run.event == 'push' &&
+      github.event.workflow_run.head_branch == 'main'
     runs-on: ubuntu-latest
-
     steps:
       - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.workflow_run.head_sha }}
 
       - name: Log in to Docker Hub
         uses: docker/login-action@v3
@@ -23,7 +34,8 @@ jobs:
 
       - name: Build and push Django image
         run: |
-          TAG="${GITHUB_SHA::7}"
+          TAG="${{ github.event.workflow_run.head_sha }}"
+          TAG="${TAG::7}"
           docker build -t kettyvaisbrot/mindedhealth-django:$TAG .
           docker push kettyvaisbrot/mindedhealth-django:$TAG
           echo "IMAGE_TAG=$TAG" >> "$GITHUB_ENV"
@@ -34,21 +46,186 @@ jobs:
           role-to-assume: arn:aws:iam::339712948392:role/mindedhealth-github-actions-deploy
           aws-region: us-east-1
 
-      - name: Deploy to the app server
+      - name: Sync compose files, refresh .env, migrate, deploy
         run: |
+          COMPOSE_B64=$(base64 -w0 docker-compose.yml)
+          CADDY_B64=$(base64 -w0 Caddyfile)
+          BOOTSTRAP_B64=$(base64 -w0 terraform/bootstrap-env.sh)
+
+          SCRIPT=$(cat <<SCRIPT_EOF
+          set -e
+          cd /home/ec2-user/app
+          echo '$COMPOSE_B64' | base64 -d > docker-compose.yml
+          echo '$CADDY_B64' | base64 -d > Caddyfile
+          echo '$BOOTSTRAP_B64' | base64 -d > bootstrap-env.sh
+          chmod +x bootstrap-env.sh
+          ./bootstrap-env.sh
+          sed -i 's|kettyvaisbrot/mindedhealth-django:.*|kettyvaisbrot/mindedhealth-django:${IMAGE_TAG}|g' docker-compose.yml
+          sudo docker-compose pull django celery-worker celery-beat
+          sudo docker-compose run --rm django python manage.py migrate --noinput
+          sudo docker-compose up -d
+          SCRIPT_EOF
+          )
+
+          INSTANCE_ID=$(aws ec2 describe-instances --filters Name=tag:Name,Values=mindedhealth-app Name=instance-state-name,Values=running --query 'Reservations[0].Instances[0].InstanceId' --output text)
+
           COMMAND_ID=$(aws ssm send-command \
-            --instance-ids "i-0ba0940a8a08113ca" \
+            --instance-ids "$INSTANCE_ID" \
             --document-name "AWS-RunShellScript" \
-            --parameters "commands=[\"set -e; sed -i 's|kettyvaisbrot/mindedhealth-django:.*|kettyvaisbrot/mindedhealth-django:${IMAGE_TAG}|g' /home/ec2-user/app/docker-compose.yml && cd /home/ec2-user/app && sudo docker-compose pull django celery-worker celery-beat && sudo docker-compose run --rm django python manage.py migrate --noinput && sudo docker-compose up -d\"]" \
+            --parameters "{\"commands\":[$(python3 -c 'import json,sys; print(json.dumps(sys.stdin.read()))' <<< "$SCRIPT")]}" \
             --query "Command.CommandId" --output text)
 
-          for i in $(seq 1 20); do
-            STATUS=$(aws ssm get-command-invocation --command-id "$COMMAND_ID" --instance-id "i-0ba0940a8a08113ca" --query "Status" --output text)
+          for i in $(seq 1 40); do
+            STATUS=$(aws ssm get-command-invocation --command-id "$COMMAND_ID" --instance-id "$INSTANCE_ID" --query "Status" --output text)
             if [ "$STATUS" != "InProgress" ] && [ "$STATUS" != "Pending" ]; then break; fi
             sleep 6
           done
 
-          aws ssm get-command-invocation --command-id "$COMMAND_ID" --instance-id "i-0ba0940a8a08113ca"
+          aws ssm get-command-invocation --command-id "$COMMAND_ID" --instance-id "$INSTANCE_ID"
+          if [ "$STATUS" != "Success" ]; then
+            echo "Deploy failed with status: $STATUS"
+            exit 1
+          fi
+
+  deploy-ai-microservice:
+    if: >
+      github.event.workflow_run.name == 'AI Microservice Tests' &&
+      github.event.workflow_run.conclusion == 'success' &&
+      github.event.workflow_run.event == 'push' &&
+      github.event.workflow_run.head_branch == 'main'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.workflow_run.head_sha }}
+
+      - name: Log in to Docker Hub
+        uses: docker/login-action@v3
+        with:
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+
+      - name: Build and push ai_microservice image
+        run: |
+          TAG="${{ github.event.workflow_run.head_sha }}"
+          TAG="${TAG::7}"
+          docker build -t kettyvaisbrot/mindedhealth-ai:$TAG ./ai_microservice
+          docker push kettyvaisbrot/mindedhealth-ai:$TAG
+          echo "IMAGE_TAG=$TAG" >> "$GITHUB_ENV"
+
+      - name: Assume AWS deploy role (OIDC, no stored keys)
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: arn:aws:iam::339712948392:role/mindedhealth-github-actions-deploy
+          aws-region: us-east-1
+
+      - name: Sync compose files, refresh .env, deploy
+        run: |
+          COMPOSE_B64=$(base64 -w0 docker-compose.yml)
+          CADDY_B64=$(base64 -w0 Caddyfile)
+          BOOTSTRAP_B64=$(base64 -w0 terraform/bootstrap-env.sh)
+
+          SCRIPT=$(cat <<SCRIPT_EOF
+          set -e
+          cd /home/ec2-user/app
+          echo '$COMPOSE_B64' | base64 -d > docker-compose.yml
+          echo '$CADDY_B64' | base64 -d > Caddyfile
+          echo '$BOOTSTRAP_B64' | base64 -d > bootstrap-env.sh
+          chmod +x bootstrap-env.sh
+          ./bootstrap-env.sh
+          sed -i 's|kettyvaisbrot/mindedhealth-ai:.*|kettyvaisbrot/mindedhealth-ai:${IMAGE_TAG}|g' docker-compose.yml
+          sudo docker-compose pull ai-microservice
+          sudo docker-compose up -d
+          SCRIPT_EOF
+          )
+
+          INSTANCE_ID=$(aws ec2 describe-instances --filters Name=tag:Name,Values=mindedhealth-app Name=instance-state-name,Values=running --query 'Reservations[0].Instances[0].InstanceId' --output text)
+
+          COMMAND_ID=$(aws ssm send-command \
+            --instance-ids "$INSTANCE_ID" \
+            --document-name "AWS-RunShellScript" \
+            --parameters "{\"commands\":[$(python3 -c 'import json,sys; print(json.dumps(sys.stdin.read()))' <<< "$SCRIPT")]}" \
+            --query "Command.CommandId" --output text)
+
+          for i in $(seq 1 40); do
+            STATUS=$(aws ssm get-command-invocation --command-id "$COMMAND_ID" --instance-id "$INSTANCE_ID" --query "Status" --output text)
+            if [ "$STATUS" != "InProgress" ] && [ "$STATUS" != "Pending" ]; then break; fi
+            sleep 6
+          done
+
+          aws ssm get-command-invocation --command-id "$COMMAND_ID" --instance-id "$INSTANCE_ID"
+          if [ "$STATUS" != "Success" ]; then
+            echo "Deploy failed with status: $STATUS"
+            exit 1
+          fi
+
+  deploy-insights-service:
+    if: >
+      github.event.workflow_run.name == 'Insights Service Tests' &&
+      github.event.workflow_run.conclusion == 'success' &&
+      github.event.workflow_run.event == 'push' &&
+      github.event.workflow_run.head_branch == 'main'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.workflow_run.head_sha }}
+
+      - name: Log in to Docker Hub
+        uses: docker/login-action@v3
+        with:
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+
+      - name: Build and push insights_service image
+        run: |
+          TAG="${{ github.event.workflow_run.head_sha }}"
+          TAG="${TAG::7}"
+          docker build -t kettyvaisbrot/mindedhealth-insights:$TAG ./insights_service
+          docker push kettyvaisbrot/mindedhealth-insights:$TAG
+          echo "IMAGE_TAG=$TAG" >> "$GITHUB_ENV"
+
+      - name: Assume AWS deploy role (OIDC, no stored keys)
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: arn:aws:iam::339712948392:role/mindedhealth-github-actions-deploy
+          aws-region: us-east-1
+
+      - name: Sync compose files, refresh .env, deploy
+        run: |
+          COMPOSE_B64=$(base64 -w0 docker-compose.yml)
+          CADDY_B64=$(base64 -w0 Caddyfile)
+          BOOTSTRAP_B64=$(base64 -w0 terraform/bootstrap-env.sh)
+
+          SCRIPT=$(cat <<SCRIPT_EOF
+          set -e
+          cd /home/ec2-user/app
+          echo '$COMPOSE_B64' | base64 -d > docker-compose.yml
+          echo '$CADDY_B64' | base64 -d > Caddyfile
+          echo '$BOOTSTRAP_B64' | base64 -d > bootstrap-env.sh
+          chmod +x bootstrap-env.sh
+          ./bootstrap-env.sh
+          sed -i 's|kettyvaisbrot/mindedhealth-insights:.*|kettyvaisbrot/mindedhealth-insights:${IMAGE_TAG}|g' docker-compose.yml
+          sudo docker-compose pull insights-service
+          sudo docker-compose up -d
+          SCRIPT_EOF
+          )
+
+          INSTANCE_ID=$(aws ec2 describe-instances --filters Name=tag:Name,Values=mindedhealth-app Name=instance-state-name,Values=running --query 'Reservations[0].Instances[0].InstanceId' --output text)
+
+          COMMAND_ID=$(aws ssm send-command \
+            --instance-ids "$INSTANCE_ID" \
+            --document-name "AWS-RunShellScript" \
+            --parameters "{\"commands\":[$(python3 -c 'import json,sys; print(json.dumps(sys.stdin.read()))' <<< "$SCRIPT")]}" \
+            --query "Command.CommandId" --output text)
+
+          for i in $(seq 1 40); do
+            STATUS=$(aws ssm get-command-invocation --command-id "$COMMAND_ID" --instance-id "$INSTANCE_ID" --query "Status" --output text)
+            if [ "$STATUS" != "InProgress" ] && [ "$STATUS" != "Pending" ]; then break; fi
+            sleep 6
+          done
+
+          aws ssm get-command-invocation --command-id "$COMMAND_ID" --instance-id "$INSTANCE_ID"
           if [ "$STATUS" != "Success" ]; then
             echo "Deploy failed with status: $STATUS"
             exit 1
