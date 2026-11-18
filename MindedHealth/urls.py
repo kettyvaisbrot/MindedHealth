@@ -15,6 +15,7 @@ Including another URLconf
     2. Add a URL to urlpatterns:  path('blog/', include('blog.urls'))
 """
 
+from django.conf import settings
 from django.contrib import admin
 from django.urls import path, include, re_path
 from users.views import (
@@ -52,7 +53,6 @@ schema_view = get_schema_view(
 
 urlpatterns = [
     path("healthz/", healthz, name="healthz"),
-    path("silk/", include("silk.urls", namespace="silk")),
     path("admin/", admin.site.urls),
     path("dashboard/", include("dashboard.urls", namespace="dashboard")),
     path("", home, name="home"),
@@ -98,3 +98,8 @@ urlpatterns = [
     ), name='password_reset_complete'),
 
 ]
+
+if settings.DEBUG:
+    # Raw per-request/SQL profiling -- never exposed in production (see
+    # settings.py, SilkyMiddleware is excluded from MIDDLEWARE unless DEBUG).
+    urlpatterns += [path("silk/", include("silk.urls", namespace="silk"))]
