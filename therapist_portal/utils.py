@@ -1,4 +1,6 @@
-from django.db.models import Max
+from datetime import date, timedelta
+
+from django.db.models import Count, Max
 from django.shortcuts import get_object_or_404, redirect
 
 from dashboard.models import (
@@ -9,6 +11,7 @@ from dashboard.models import (
     SleepingLog,
     SportLog,
 )
+from medications.models import Medication
 from users.models import PatientProfile, TherapistProfile
 
 LAST_ACTIVITY_MODELS = (
@@ -93,3 +96,42 @@ def get_medication_adherence(medication, start_date, end_date):
     percentage = round(taken / expected * 100) if expected > 0 else 0
 
     return {'taken': taken, 'expected': expected, 'percentage': percentage}
+
+
+def get_patients_with_medication_overuse(user_ids):
+    """Returns {user_id: True/False} — whether ANY of that user's
+    medications exceeded 100% adherence in the last 30 days.
+
+    Two queries total, not one per patient per medication: all
+    medications for every user_id in one query, all matching intake
+    counts (grouped by user+medication) in a second — the same O(1)
+    principle as get_last_activity_by_user. 'expected' itself is just
+    date arithmetic in Python, no extra query."""
+    today = date.today()
+    start = today - timedelta(days=29)
+
+    result = {uid: False for uid in user_ids}
+
+    medications_by_user = {}
+    for medication in Medication.objects.filter(user_id__in=user_ids):
+        medications_by_user.setdefault(medication.user_id, []).append(medication)
+
+    taken_rows = (
+        MedicationIntakeLog.objects
+        .filter(user_id__in=user_ids, date__gte=start, date__lte=today, time_taken__isnull=False)
+        .values('user_id', 'medication_ref_id')
+        .annotate(taken=Count('id'))
+    )
+    taken_map = {(row['user_id'], row['medication_ref_id']): row['taken'] for row in taken_rows}
+
+    for uid, medications in medications_by_user.items():
+        for medication in medications:
+            active_start = max(start, medication.created_at.date())
+            active_days = max((today - active_start).days + 1, 0)
+            expected = medication.times_per_day * active_days
+            taken = taken_map.get((uid, medication.id), 0)
+            if expected > 0 and taken > expected:
+                result[uid] = True
+                break
+
+    return result

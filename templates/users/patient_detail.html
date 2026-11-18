@@ -2,9 +2,57 @@
 
 {% block title %}{{ patient.user.username }} - MindedHealth{% endblock %}
 
+{% block extra_css %}
+<style>
+    .overview-strip { display: flex; flex-wrap: wrap; gap: 12px; margin-bottom: 25px; }
+    .overview-card {
+        flex: 1 1 180px;
+        background: #fff;
+        border: 1px solid #ddd;
+        border-radius: 8px;
+        padding: 14px 16px;
+        text-decoration: none;
+        color: inherit;
+    }
+    a.overview-card:hover { border-color: #007bff; }
+    .overview-card .label { font-size: 13px; color: #666; margin-bottom: 4px; }
+    .overview-card .value { font-size: 18px; font-weight: bold; }
+    .overview-card .value.overuse { color: #B5412A; }
+</style>
+{% endblock %}
+
 {% block content %}
 <div class="container">
     <h2>{{ patient.user.username }}</h2>
+
+    <div class="overview-strip">
+        <div class="overview-card">
+            <div class="label">Last activity</div>
+            <div class="value">
+                {% if has_activity %}
+                    {{ days_since_activity }} day{{ days_since_activity|pluralize }} ago
+                {% else %}
+                    New patient
+                {% endif %}
+            </div>
+        </div>
+
+        <a href="{% url 'therapist_portal:patient_medications' patient.id %}" class="overview-card">
+            <div class="label">Medications (30 days)</div>
+            <div class="value{% if headline_medication.1 > 100 %} overuse{% endif %}">
+                {% if has_medications %}
+                    {{ headline_medication.1 }}%{% if extra_medication_count > 0 %} +{{ extra_medication_count }} more{% endif %}
+                {% else %}
+                    No medications
+                {% endif %}
+            </div>
+        </a>
+
+        <a href="{% url 'therapist_portal:patient_seizures' patient.id %}" class="overview-card">
+            <div class="label">Seizures (30 days)</div>
+            <div class="value">{{ seizure_count_30d }}</div>
+        </a>
+    </div>
 
     <div style="display: flex; flex-wrap: wrap; gap: 10px;">
         <a href="{% url 'my_statistics:statistics_view' %}?patient_id={{ patient.id }}" class="btn">View Statistics</a>
