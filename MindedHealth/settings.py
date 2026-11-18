@@ -288,7 +288,7 @@ INTERNAL_JWT_ISSUER = os.getenv('INTERNAL_JWT_ISSUER', 'django-api')
 INTERNAL_JWT_LIFETIME_SECONDS = 60  # seconds; intentionally short — internal hop only
 
 MIDDLEWARE = [
-    "silk.middleware.SilkyMiddleware",
+    *(["silk.middleware.SilkyMiddleware"] if DEBUG else []),
     "django.middleware.security.SecurityMiddleware",
     "whitenoise.middleware.WhiteNoiseMiddleware",
     "django.contrib.sessions.middleware.SessionMiddleware",
