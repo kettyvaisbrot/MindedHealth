@@ -19,10 +19,15 @@ github_ec2.pub
 *.tfstate.backup
 *.tfvars
 tfplan.out
+tfplan*.out
 *.local.txt
 *.local.ps1
 .terraform.lock.hcl
 terraform/.terraform/
+current_security_screenshoot.md
+current_security_screenshoot.html
+.scratch_design/
+deployment-commands.txt
 .kube/
 staticfiles/
 node_modules/
